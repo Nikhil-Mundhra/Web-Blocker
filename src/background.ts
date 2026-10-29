@@ -35,6 +35,25 @@ initStorage().then(() => {
   });
 });
 
+chrome.runtime.onInstalled.addListener((details) => {
+  try {
+    const currentVersion = chrome.runtime.getManifest().version;
+    if (details.reason === "update") {
+      storage.set({
+        lastVersion: currentVersion,
+        whatsNewDismissed: false,
+      });
+    } else if (details.reason === "install") {
+      storage.set({
+        lastVersion: currentVersion,
+        whatsNewDismissed: true,
+      });
+    }
+  } catch {
+    // Graceful handling
+  }
+});
+
 chrome.action.onClicked.addListener(() => {
   chrome.runtime.openOptionsPage();
 });
@@ -52,15 +71,16 @@ chrome.webNavigation.onBeforeNavigate.addListener((details) => {
   scrollTax({ blocked: __blocked, tabId, url });
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!tabId || !__enabled || !__blocked.length) {
     return;
   }
 
-  const { url } = changeInfo;
+  const url = changeInfo.url || tab?.url;
   if (!url || !url.startsWith("http")) {
     return;
   }
 
-  scrollTax({ blocked: __blocked, tabId, url });
+  const title = changeInfo.title || tab?.title;
+  scrollTax({ blocked: __blocked, tabId, url, title });
 });
