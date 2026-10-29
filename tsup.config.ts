@@ -9,6 +9,7 @@ export default defineConfig({
     "src/background.ts",
     "src/blocked.ts",
     "src/options.ts",
+    "src/popup.ts",
   ],
   env: { TARGET },
   outDir: `dist/${TARGET}`,
@@ -28,6 +29,8 @@ export default defineConfig({
       "blocked.html",
       "options.css",
       "options.html",
+      "popup.css",
+      "popup.html",
       `manifest-${TARGET}.json`,
     ];
 

@@ -11,7 +11,8 @@
     "default_icon": {
       "32": "icon_32.png",
       "128": "icon_128.png"
-    }
+    },
+    "default_popup": "popup.html"
   },
   "options_page": "options.html",
   "permissions": [

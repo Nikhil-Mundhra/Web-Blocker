@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>ScrollTax</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.mjs"></script>
+</head>
+
+<body>
+  <div class="popup-container">
+    <div class="header">
+      <img src="icon_32.png" width="24" height="24" alt="ScrollTax">
+      <span class="title">ScrollTax</span>
+      <span id="status-badge" class="badge">Active</span>
+    </div>
+
+    <div id="site-section" class="site-section">
+      <div class="site-label">Current Tab</div>
+      <div id="current-url" class="current-url">Loading...</div>
+
+      <div class="block-actions">
+        <button id="block-page-btn" type="button" class="btn btn-secondary">Block this page</button>
+        <button id="block-site-btn" type="button" class="btn btn-primary">Block entire site</button>
+      </div>
+    </div>
+
+    <div id="pause-section" class="pause-section">
+      <div id="pause-status" class="pause-status hidden">
+        <span>Paused (<span id="pause-countdown">0</span>s left)</span>
+        <button id="resume-btn" type="button" class="btn btn-small">Resume</button>
+      </div>
+      <div id="pause-actions" class="pause-actions">
+        <button id="pause-1m-btn" type="button" class="btn btn-ghost">⏸ 1m Break</button>
+        <button id="pause-5m-btn" type="button" class="btn btn-ghost">⏸ 5m Break</button>
+      </div>
+    </div>
+
+    <div class="footer">
+      <a id="options-link" href="#" class="options-link">⚙️ Options & Settings</a>
+    </div>
+  </div>
+</body>
+
+</html>
