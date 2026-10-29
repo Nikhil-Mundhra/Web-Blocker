@@ -15,6 +15,15 @@ test("getRevisitedSchema() returns defaults for any invalid attribute", () => {
     counterShow: DEFAULTS.counterShow,
     counterPeriod: DEFAULTS.counterPeriod,
     resolution: DEFAULTS.resolution,
+    redirectUrl: DEFAULTS.redirectUrl,
+    mode: DEFAULTS.mode,
+    schedule: DEFAULTS.schedule,
+    pausedUntil: DEFAULTS.pausedUntil,
+    lockedUntil: DEFAULTS.lockedUntil,
+    disableDelay: DEFAULTS.disableDelay,
+    blockByTitle: DEFAULTS.blockByTitle,
+    lastVersion: DEFAULTS.lastVersion,
+    whatsNewDismissed: DEFAULTS.whatsNewDismissed,
   } as Partial<Schema>);
 
   expect(getRevisitedSchema({
@@ -30,10 +39,12 @@ test("getRevisitedSchema() returns defaults for any invalid attribute", () => {
     ...DEFAULTS,
     enabled: "YES", // invalid
     blocked: "ALL", // invalid
-    resolution: "BLOCK", // invalid
+    resolution: "INVALID_RES", // invalid
+    mode: "INVALID_MODE", // invalid
   })).toEqual({
     enabled: DEFAULTS.enabled,
     blocked: DEFAULTS.blocked,
     resolution: DEFAULTS.resolution,
+    mode: DEFAULTS.mode,
   } as Partial<Schema>);
 });
