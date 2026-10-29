@@ -104,6 +104,68 @@
 
   <div class="section-divider"></div>
 
+  <h3>Daily Time Limits per Website</h3>
+  <div class="options">
+    <p class="section-desc">Set specific time allowances per website per day. Once the limit is exceeded, access will be blocked until tomorrow or until an extension is earned.</p>
+    
+    <div class="time-limit-form">
+      <input type="text" id="limit-domain" placeholder="e.g. youtube.com or reddit.com" class="text-input" />
+      <div class="minutes-input-group">
+        <input type="number" id="limit-minutes" min="1" max="1440" placeholder="15" class="number-input" />
+        <span>minutes / day</span>
+      </div>
+      <button id="set-limit-btn" type="button" class="btn btn-primary">Set Limit</button>
+    </div>
+
+    <div id="time-limits-container" class="time-limits-container">
+      <table class="time-limits-table">
+        <thead>
+          <tr>
+            <th>Website</th>
+            <th>Daily Limit</th>
+            <th>Today's Usage</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="time-limits-tbody">
+          <tr class="empty-row"><td colspan="4">No site limits configured yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <h3>🪞 The Mirror of Accountability (Speech-to-Text Challenge)</h3>
+  <div class="options">
+    <p class="section-desc">When a site is blocked, requesting an extension requires confronting yourself in a live video mirror and repeating a self-accountability phrase verified by local OpenAI Whisper / MLX.</p>
+    
+    <div class="option baseline">
+      <label>Custom Phrase:</label>
+      <input type="text" id="challenge-phrase" class="text-input full-width" placeholder="I am wasting my time and I need to get back to work" />
+    </div>
+
+    <div class="option">
+      <label>Repetition Count:</label>
+      <input type="number" id="challenge-repeat-count" min="1" max="10" value="3" class="number-input" />
+      <span class="input-hint">times to repeat the phrase</span>
+    </div>
+
+    <div class="option baseline">
+      <label>Local Whisper Server:</label>
+      <div class="whisper-server-row">
+        <input type="text" id="whisper-server-url" class="text-input" value="http://127.0.0.1:8765" />
+        <button id="test-whisper-btn" type="button" class="btn btn-secondary">Test Connection</button>
+        <span id="whisper-status-badge" class="badge">Checking...</span>
+      </div>
+    </div>
+    <div class="whisper-info-card">
+      <strong>Apple Silicon MLX Whisper Integration:</strong> Runs 100% locally on Apple Silicon Neural Engine & GPU with zero cloud latency. If the local server is offline, browser Web Speech API will be used as automatic fallback.
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
   <h3>Block Schedule</h3>
   <div class="options">
     <div class="option">

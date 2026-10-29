@@ -44,6 +44,12 @@ export interface Schema {
   blockByTitle: boolean
   lastVersion: string
   whatsNewDismissed: boolean
+  timeLimits: Record<string, number>
+  dailyUsage: Record<string, Record<string, number>>
+  siteExtensions: Record<string, number>
+  challengePhrase: string
+  challengeRepeatCount: number
+  whisperServerUrl: string
 }
 
 export const DEFAULT_SCHEDULE: Readonly<Schedule> = {
@@ -70,6 +76,12 @@ export const DEFAULTS: Readonly<Schema> = {
   blockByTitle: false,
   lastVersion: "0.1.0",
   whatsNewDismissed: true,
+  timeLimits: {},
+  dailyUsage: {},
+  siteExtensions: {},
+  challengePhrase: "I am wasting my time and I need to get back to work",
+  challengeRepeatCount: 3,
+  whisperServerUrl: "http://127.0.0.1:8765",
 };
 
 export const VALIDATORS: Readonly<Record<keyof Schema, (value: unknown) => boolean>> = {
@@ -96,6 +108,12 @@ export const VALIDATORS: Readonly<Record<keyof Schema, (value: unknown) => boole
   blockByTitle: (value) => typeof value === "boolean",
   lastVersion: (value) => typeof value === "string",
   whatsNewDismissed: (value) => typeof value === "boolean",
+  timeLimits: (value) => typeof value === "object" && value !== null && !Array.isArray(value),
+  dailyUsage: (value) => typeof value === "object" && value !== null && !Array.isArray(value),
+  siteExtensions: (value) => typeof value === "object" && value !== null && !Array.isArray(value),
+  challengePhrase: (value) => typeof value === "string" && value.trim().length > 0,
+  challengeRepeatCount: (value) => typeof value === "number" && value >= 1,
+  whisperServerUrl: (value) => typeof value === "string",
 };
 
 export const BLOCKED_EXAMPLE: string[] = [

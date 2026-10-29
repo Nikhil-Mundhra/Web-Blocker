@@ -232,4 +232,111 @@ describe("Options Page Integration Test", () => {
     );
     expect(banner.classList.contains("hidden")).toBe(true);
   });
+
+  it("manages daily time limits per website", async () => {
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const domainInput = document.getElementById("limit-domain") as HTMLInputElement;
+    const minutesInput = document.getElementById("limit-minutes") as HTMLInputElement;
+    const addBtn = document.getElementById("set-limit-btn") as HTMLButtonElement;
+    const tbody = document.getElementById("time-limits-tbody") as HTMLTableSectionElement;
+
+    // Add time limit for reddit.com: 30 mins
+    domainInput.value = "https://reddit.com/r/all";
+    minutesInput.value = "30";
+    addBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(mockStorageSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeLimits: { "reddit.com": 30 },
+      }),
+    );
+
+    // Verify row rendered in tbody
+    expect(tbody.innerHTML).toContain("reddit.com");
+    expect(tbody.innerHTML).toContain("30 min / day");
+
+    // Click delete button
+    const deleteBtn = tbody.querySelector<HTMLButtonElement>(".delete-limit-btn");
+    expect(deleteBtn).not.toBeNull();
+    deleteBtn?.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(mockStorageSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeLimits: {},
+      }),
+    );
+  });
+
+  it("configures Mirror of Accountability phrase and repeat count", async () => {
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const phraseInput = document.getElementById("challenge-phrase") as HTMLInputElement;
+    const countInput = document.getElementById("challenge-repeat-count") as HTMLInputElement;
+
+    phraseInput.value = "I am focusing on my deep work";
+    phraseInput.dispatchEvent(new Event("input"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(mockStorageSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        challengePhrase: "I am focusing on my deep work",
+      }),
+    );
+
+    countInput.value = "4";
+    countInput.dispatchEvent(new Event("change"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(mockStorageSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        challengeRepeatCount: 4,
+      }),
+    );
+  });
+
+  it("tests MLX-Whisper server connectivity status", async () => {
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const testBtn = document.getElementById("test-whisper-btn") as HTMLButtonElement;
+    const statusBadge = document.getElementById("whisper-status-badge") as HTMLSpanElement;
+
+    // Mock successful fetch
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: "healthy", model: "mlx-community/whisper-small-mlx" }),
+    });
+
+    testBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(statusBadge.textContent).toContain("Online (MLX-Whisper)");
+
+    // Mock failed fetch
+    (global.fetch as jest.Mock).mockRejectedValue(new Error("Connection refused"));
+    testBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(statusBadge.textContent).toContain("Offline (Web Speech Fallback)");
+
+    global.fetch = originalFetch;
+  });
 });

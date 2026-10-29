@@ -1,6 +1,7 @@
 import storage, {
   Schema, Resolution, Mode, CounterPeriod, RESOLUTIONS, Schedule, BLOCKED_EXAMPLE,
 } from "./storage";
+import { normalizeHost, getTodayKey } from "./helpers/time-limits";
 
 const UI = (() => {
   const elements = {
@@ -29,6 +30,19 @@ const UI = (() => {
     cooldownModal: document.getElementById("cooldown-modal") as HTMLDivElement,
     cooldownTimer: document.getElementById("cooldown-timer") as HTMLElement,
     cancelCooldownBtn: document.getElementById("cancel-cooldown-btn") as HTMLButtonElement,
+
+    // Time Limits
+    limitDomain: document.getElementById("limit-domain") as HTMLInputElement,
+    limitMinutes: document.getElementById("limit-minutes") as HTMLInputElement,
+    setLimitBtn: document.getElementById("set-limit-btn") as HTMLButtonElement,
+    timeLimitsTbody: document.getElementById("time-limits-tbody") as HTMLTableSectionElement,
+
+    // Mirror / Speech Challenge
+    challengePhrase: document.getElementById("challenge-phrase") as HTMLInputElement,
+    challengeRepeatCount: document.getElementById("challenge-repeat-count") as HTMLInputElement,
+    whisperServerUrl: document.getElementById("whisper-server-url") as HTMLInputElement,
+    testWhisperBtn: document.getElementById("test-whisper-btn") as HTMLButtonElement,
+    whisperStatusBadge: document.getElementById("whisper-status-badge") as HTMLSpanElement,
   };
 
   elements.blockedList.placeholder = BLOCKED_EXAMPLE.join("\n");
@@ -43,13 +57,14 @@ const UI = (() => {
   let activeLockInterval: NodeJS.Timeout | null = null;
   let currentDisableDelay = 0;
   let currentLockedUntil: number | null = null;
+  let currentTimeLimits: Record<string, number> = {};
+  let currentDailyUsage: Record<string, Record<string, number>> = {};
 
   // 1. Enabled change with Cooldown protection (Issue #6)
   elements.enabled.addEventListener("change", (event) => {
     const desiredState = stringToBoolean(getEventTargetValue(event));
 
     if (!desiredState && currentDisableDelay > 0) {
-      // Revert select temporarily until cooldown finishes
       elements.enabled.value = "YES";
       startCooldown(currentDisableDelay);
       return;
@@ -150,23 +165,10 @@ const UI = (() => {
     storage.set({ schedule });
   };
 
-  elements.scheduleEnabled.addEventListener("change", () => {
-    saveSchedule();
-  });
-
-  elements.scheduleDays.forEach((cb) => {
-    cb.addEventListener("change", () => {
-      saveSchedule();
-    });
-  });
-
-  elements.scheduleStart.addEventListener("change", () => {
-    saveSchedule();
-  });
-
-  elements.scheduleEnd.addEventListener("change", () => {
-    saveSchedule();
-  });
+  elements.scheduleEnabled.addEventListener("change", saveSchedule);
+  elements.scheduleDays.forEach((cb) => cb.addEventListener("change", saveSchedule));
+  elements.scheduleStart.addEventListener("change", saveSchedule);
+  elements.scheduleEnd.addEventListener("change", saveSchedule);
 
   // 8. Disable Cooldown setting (Issue #6)
   elements.disableDelay.addEventListener("change", (event) => {
@@ -217,13 +219,8 @@ const UI = (() => {
   };
 
   // 10. Syntax Reference Modal (Issue #13)
-  const openSyntaxModal = () => {
-    elements.syntaxModal.classList.remove("hidden");
-  };
-
-  const closeSyntaxModal = () => {
-    elements.syntaxModal.classList.add("hidden");
-  };
+  const openSyntaxModal = () => elements.syntaxModal.classList.remove("hidden");
+  const closeSyntaxModal = () => elements.syntaxModal.classList.add("hidden");
 
   elements.syntaxHelpBtn.addEventListener("click", openSyntaxModal);
   elements.closeSyntaxModal.addEventListener("click", closeSyntaxModal);
@@ -242,7 +239,13 @@ const UI = (() => {
         activeCooldownInterval = null;
       }
       elements.cooldownModal.classList.add("hidden");
-    } else if ((e.key === "?" || (e.key === "/" && (e.ctrlKey || e.metaKey))) && document.activeElement !== elements.blockedList && document.activeElement !== elements.redirectUrl) {
+    } else if (
+      (e.key === "?" || (e.key === "/" && (e.ctrlKey || e.metaKey))) &&
+      document.activeElement !== elements.blockedList &&
+      document.activeElement !== elements.redirectUrl &&
+      document.activeElement !== elements.limitDomain &&
+      document.activeElement !== elements.challengePhrase
+    ) {
       elements.syntaxModal.classList.toggle("hidden");
     }
   });
@@ -251,6 +254,109 @@ const UI = (() => {
   elements.dismissWhatsNew.addEventListener("click", () => {
     storage.set({ whatsNewDismissed: true });
     elements.whatsNewBanner.classList.add("hidden");
+  });
+
+  // 12. Fine Time Limits per Website
+  const renderTimeLimitsTable = () => {
+    const domains = Object.keys(currentTimeLimits);
+    if (domains.length === 0) {
+      elements.timeLimitsTbody.innerHTML = '<tr class="empty-row"><td colspan="4">No site limits configured yet.</td></tr>';
+      return;
+    }
+
+    const todayKey = getTodayKey();
+    const todayUsage = currentDailyUsage[todayKey] || {};
+
+    elements.timeLimitsTbody.innerHTML = "";
+    domains.forEach((domain) => {
+      const limitMinutes = currentTimeLimits[domain];
+      const usedSeconds = todayUsage[domain] || 0;
+      const usedMinutes = Math.floor(usedSeconds / 60);
+      const percent = Math.min(100, Math.round((usedSeconds / (limitMinutes * 60)) * 100));
+
+      let fillClass = "progress-fill";
+      if (percent >= 100) fillClass += " danger";
+      else if (percent >= 80) fillClass += " warning";
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${domain}</strong></td>
+        <td>${limitMinutes} min / day</td>
+        <td>
+          <div class="usage-progress-bar">
+            <div class="progress-track"><div class="${fillClass}" style="width: ${percent}%;"></div></div>
+            <span>${usedMinutes}m / ${limitMinutes}m (${percent}%)</span>
+          </div>
+        </td>
+        <td><button type="button" class="btn btn-danger btn-small delete-limit-btn" data-domain="${domain}">Delete</button></td>
+      `;
+      elements.timeLimitsTbody.appendChild(tr);
+    });
+
+    // Attach delete listeners
+    elements.timeLimitsTbody.querySelectorAll<HTMLButtonElement>(".delete-limit-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const domain = btn.dataset.domain;
+        if (domain && currentTimeLimits[domain]) {
+          const updated = { ...currentTimeLimits };
+          delete updated[domain];
+          storage.set({ timeLimits: updated });
+        }
+      });
+    });
+  };
+
+  elements.setLimitBtn.addEventListener("click", () => {
+    const rawDomain = elements.limitDomain.value.trim();
+    const minutes = Number(elements.limitMinutes.value);
+
+    if (!rawDomain) return;
+    const norm = normalizeHost(rawDomain);
+    const limitMin = isNaN(minutes) || minutes < 1 ? 15 : minutes;
+
+    const updated = { ...currentTimeLimits, [norm]: limitMin };
+    storage.set({ timeLimits: updated }).then(() => {
+      elements.limitDomain.value = "";
+      elements.limitMinutes.value = "";
+    });
+  });
+
+  // 13. Mirror of Accountability & Whisper Server Settings
+  elements.challengePhrase.addEventListener("input", (e) => {
+    const challengePhrase = (e.target as HTMLInputElement).value;
+    storage.set({ challengePhrase });
+  });
+
+  elements.challengeRepeatCount.addEventListener("change", (e) => {
+    const challengeRepeatCount = Math.max(1, Number((e.target as HTMLInputElement).value));
+    storage.set({ challengeRepeatCount });
+  });
+
+  elements.whisperServerUrl.addEventListener("input", (e) => {
+    const whisperServerUrl = (e.target as HTMLInputElement).value.trim();
+    storage.set({ whisperServerUrl });
+  });
+
+  const checkWhisperHealth = async (url: string) => {
+    elements.whisperStatusBadge.textContent = "Connecting...";
+    elements.whisperStatusBadge.className = "badge paused";
+
+    try {
+      const resp = await fetch(`${url}/health`, { method: "GET" });
+      if (resp.ok) {
+        elements.whisperStatusBadge.textContent = "🟢 Online (MLX-Whisper)";
+        elements.whisperStatusBadge.className = "badge";
+      } else {
+        throw new Error("HTTP error");
+      }
+    } catch {
+      elements.whisperStatusBadge.textContent = "⚪ Offline (Web Speech Fallback)";
+      elements.whisperStatusBadge.className = "badge inactive";
+    }
+  };
+
+  elements.testWhisperBtn.addEventListener("click", () => {
+    checkWhisperHealth(elements.whisperServerUrl.value.trim() || "http://127.0.0.1:8765");
   });
 
   const init = <T extends Partial<Schema>>(items: T) => {
@@ -322,6 +428,29 @@ const UI = (() => {
         elements.scheduleEnd.value = items.schedule.endTime;
       }
     }
+
+    if (items.timeLimits !== undefined) {
+      currentTimeLimits = items.timeLimits || {};
+      renderTimeLimitsTable();
+    }
+
+    if (items.dailyUsage !== undefined) {
+      currentDailyUsage = items.dailyUsage || {};
+      renderTimeLimitsTable();
+    }
+
+    if (items.challengePhrase !== undefined) {
+      elements.challengePhrase.value = items.challengePhrase;
+    }
+
+    if (items.challengeRepeatCount !== undefined) {
+      elements.challengeRepeatCount.value = String(items.challengeRepeatCount);
+    }
+
+    if (items.whisperServerUrl !== undefined) {
+      elements.whisperServerUrl.value = items.whisperServerUrl;
+      checkWhisperHealth(items.whisperServerUrl);
+    }
   };
 
   return { elements, init };
@@ -341,6 +470,12 @@ window.addEventListener("DOMContentLoaded", () => {
     "disableDelay",
     "lockedUntil",
     "whatsNewDismissed",
+    "timeLimits",
+    "dailyUsage",
+    "siteExtensions",
+    "challengePhrase",
+    "challengeRepeatCount",
+    "whisperServerUrl",
   ];
 
   storage.get(keys).then((local) => {

@@ -20,6 +20,72 @@
     <button id="snooze-btn" type="button" class="btn">Take a 1-minute break</button>
     <a href="options.html" class="link">See Options</a>
   </div>
+
+  <!-- The randomly moving button required to request an extension -->
+  <button id="catch-me-btn" type="button" class="moving-btn" title="Catch me if you can!">🏃 Catch Me for an Extension</button>
+
+  <!-- The Mirror of Accountability Modal -->
+  <div id="mirror-modal" class="modal-backdrop hidden">
+    <div class="modal-card mirror-card">
+      <div class="modal-header">
+        <h3>🪞 The Mirror of Accountability</h3>
+        <button id="close-mirror-btn" type="button" class="close-btn">&times;</button>
+      </div>
+
+      <div id="mirror-challenge-section">
+        <p class="mirror-instructions">
+          Look yourself in the eyes. To earn an extension, repeat this phrase
+          <strong id="required-repeat-count">3</strong> times:
+        </p>
+
+        <div id="challenge-phrase-display" class="phrase-display">
+          "I am wasting my time and I need to get back to work"
+        </div>
+
+        <div class="mirror-container">
+          <video id="mirror-video" autoplay playsinline muted></video>
+          <div id="recording-overlay" class="recording-overlay hidden">
+            <span class="pulsing-dot"></span>
+            <span id="recording-status-text">Listening with MLX Whisper...</span>
+          </div>
+        </div>
+
+        <div id="verification-status" class="verification-status">
+          Click "Start Speaking" and repeat the phrase.
+        </div>
+
+        <div id="transcript-display" class="transcript-display hidden"></div>
+
+        <div class="mirror-actions">
+          <button id="record-btn" type="button" class="btn btn-record">🎙️ Start Speaking</button>
+          <button id="cancel-mirror-challenge" type="button" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+
+      <!-- Time Increase Options Screen (appears after phrase verification) -->
+      <div id="extension-screen" class="extension-screen hidden">
+        <div class="success-banner">
+          <h3>🎉 Confession Accepted!</h3>
+          <p>You looked yourself in the eyes and admitted it. Choose your time extension:</p>
+        </div>
+
+        <div class="extension-options-grid">
+          <button id="ext-1m" type="button" class="btn btn-ext" data-minutes="1">
+            <span class="ext-time">+1 Minute</span>
+            <span class="ext-desc">Quick glance</span>
+          </button>
+          <button id="ext-5m" type="button" class="btn btn-ext" data-minutes="5">
+            <span class="ext-time">+5 Minutes</span>
+            <span class="ext-desc">Short check</span>
+          </button>
+          <button id="ext-20m" type="button" class="btn btn-ext" data-minutes="20">
+            <span class="ext-time">+20 Minutes</span>
+            <span class="ext-desc">Work break</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

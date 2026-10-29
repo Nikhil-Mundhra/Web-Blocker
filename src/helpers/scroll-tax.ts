@@ -10,13 +10,14 @@ interface ScrollTaxOptions {
   tabId: number
   url: string
   title?: string
+  reason?: string
 }
 
 // Track recent block timestamps per tab to prevent rapid duplicate actions during multi-hop redirects
 const recentBlockedTabs = new Map<number, number>();
 
 export default (options: ScrollTaxOptions) => {
-  const { blocked, tabId, url, title } = options;
+  const { blocked, tabId, url, title, reason } = options;
   if (!tabId || !url.startsWith("http")) {
     return;
   }
@@ -60,9 +61,11 @@ export default (options: ScrollTaxOptions) => {
 
     // 3. Determine if site should be blocked based on mode
     let shouldBlock = false;
-    let effectiveRulePath = foundRule?.path || "[Approved Sites Only]";
+    let effectiveRulePath = reason || foundRule?.path || "[Approved Sites Only]";
 
-    if (mode === "WHITELIST") {
+    if (reason) {
+      shouldBlock = true;
+    } else if (mode === "WHITELIST") {
       // In Whitelist mode, only explicitly allowed rules are permitted
       if (foundRule && foundRule.type === "allow") {
         shouldBlock = false;

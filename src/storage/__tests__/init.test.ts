@@ -24,6 +24,12 @@ test("getRevisitedSchema() returns defaults for any invalid attribute", () => {
     blockByTitle: DEFAULTS.blockByTitle,
     lastVersion: DEFAULTS.lastVersion,
     whatsNewDismissed: DEFAULTS.whatsNewDismissed,
+    timeLimits: DEFAULTS.timeLimits,
+    dailyUsage: DEFAULTS.dailyUsage,
+    siteExtensions: DEFAULTS.siteExtensions,
+    challengePhrase: DEFAULTS.challengePhrase,
+    challengeRepeatCount: DEFAULTS.challengeRepeatCount,
+    whisperServerUrl: DEFAULTS.whisperServerUrl,
   } as Partial<Schema>);
 
   expect(getRevisitedSchema({
@@ -41,10 +47,12 @@ test("getRevisitedSchema() returns defaults for any invalid attribute", () => {
     blocked: "ALL", // invalid
     resolution: "INVALID_RES", // invalid
     mode: "INVALID_MODE", // invalid
+    challengeRepeatCount: -1, // invalid
   })).toEqual({
     enabled: DEFAULTS.enabled,
     blocked: DEFAULTS.blocked,
     resolution: DEFAULTS.resolution,
     mode: DEFAULTS.mode,
+    challengeRepeatCount: DEFAULTS.challengeRepeatCount,
   } as Partial<Schema>);
 });

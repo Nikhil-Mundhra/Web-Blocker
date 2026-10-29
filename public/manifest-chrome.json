@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ScrollTax",
   "description": "A tax on doomscrolling. Block distracting websites and take back your attention.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "icons": {
     "32": "icon_32.png",
     "128": "icon_128.png"
