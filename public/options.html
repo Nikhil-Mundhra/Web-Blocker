@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>ScrollTax</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="options.css">
+  <link rel="icon" type="image/png" href="icon_32.png">
+  <script type="module" src="options.mjs"></script>
+</head>
+
+<body>
+  <h1>
+    <img src="icon_128.png">
+    <span>ScrollTax</span>
+  </h1>
+
+  <div class="options">
+    <div id="enabled-option" class="option">
+      <label>Enabled?</label>
+      <select id="enabled">
+        <option value="YES">Yes</option>
+        <option value="NO">No</option>
+      </select>
+    </div>
+
+    <div id="context-menu-option" class="option">
+      <label>Context menu?</label>
+      <select id="context-menu">
+        <option value="YES">Yes</option>
+        <option value="NO">No</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="blocked-container">
+    <div>Sites to block</div>
+    <textarea id="blocked-list" rows="10" cols="50" spellcheck="false"></textarea>
+  </div>
+
+  <div class="options">
+    <div id="resolution-option" class="option baseline">
+      <label>How to resolve blocked?</label>
+      <div>
+        <select id="resolution">
+          <option value="CLOSE_TAB">Close Tab</option>
+          <option value="SHOW_BLOCKED_INFO_PAGE">Show Blocked info page</option>
+        </select>
+
+        <fieldset id="blocked-info-page-details">
+          <div class="option">
+            <label>Show blocked count?</label>
+            <select id="counter-show">
+              <option value="YES">Yes</option>
+              <option value="NO">No</option>
+            </select>
+          </div>
+
+          <div id="counter-period-option" class="option">
+            <label>Blocked count period?</label>
+            <select id="counter-period">
+              <option value="ALL_TIME">All Time</option>
+              <option value="THIS_MONTH">This Month</option>
+              <option value="THIS_WEEK">This Week</option>
+              <option value="TODAY">Today</option>
+            </select>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  </div>
+
+  <p id="credits">
+    Created by <a target="_blank" href="https://github.com/Nikhil-Mundhra">Nikhil Mundhra</a><br>
+    Support ScrollTax with a <span id="star">★</span> on <a target="_blank" href="https://github.com/Nikhil-Mundhra/Web-Blocker">GitHub</a>
+  </p>
+</body>
+
+</html>

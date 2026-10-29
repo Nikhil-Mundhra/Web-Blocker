@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "ScrollTax",
+  "description": "A tax on doomscrolling. Block distracting websites and take back your attention.",
+  "version": "0.1.0",
+  "icons": {
+    "32": "icon_32.png",
+    "128": "icon_128.png"
+  },
+  "action": {
+    "default_icon": {
+      "32": "icon_32.png",
+      "128": "icon_128.png"
+    }
+  },
+  "options_page": "options.html",
+  "permissions": [
+    "storage",
+    "tabs",
+    "webNavigation",
+    "contextMenus"
+  ],
+  "background": {
+    "service_worker": "background.mjs",
+    "type": "module"
+  },
+  "incognito": "split",
+  "minimum_chrome_version": "92"
+}
