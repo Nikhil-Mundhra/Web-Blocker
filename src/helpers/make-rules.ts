@@ -1,6 +1,6 @@
 import removeProtocol from "./remove-protocol";
 
-type RuleType = "allow" | "block"
+export type RuleType = "allow" | "block";
 
 export interface Rule {
   type: RuleType
@@ -10,11 +10,17 @@ export interface Rule {
 export default (blocked: string[]): Rule[] => {
   const allowList = blocked
     .filter((item) => item.startsWith("!"))
-    .map((item) => removeProtocol(item.substring(1)));
+    .map((item) => {
+      const trimmed = item.substring(1).trim();
+      return trimmed.startsWith("/") ? trimmed : removeProtocol(trimmed);
+    });
 
   const blockList = blocked
     .filter((item) => !item.startsWith("!"))
-    .map(removeProtocol);
+    .map((item) => {
+      const trimmed = item.trim();
+      return trimmed.startsWith("/") ? trimmed : removeProtocol(trimmed);
+    });
 
   return [
     ...allowList.map((path) => ({ type: "allow", path } as Rule)),
