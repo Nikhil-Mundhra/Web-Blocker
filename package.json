@@ -13,7 +13,10 @@
     "__no-emit": "tsc --noEmit",
     "__build-chrome": "TARGET=chrome tsup",
     "__build-firefox": "TARGET=firefox tsup",
-    "build": "npm-run-all __rmrf-dist __no-emit __build-chrome __build-firefox"
+    "build": "npm-run-all __rmrf-dist __no-emit __build-chrome __build-firefox",
+    "package:chrome": "cd dist/chrome && zip -FSr ../../scroll-tax-chrome.zip .",
+    "package:firefox": "cd dist/firefox && zip -FSr ../../scroll-tax-firefox.zip .",
+    "package": "npm-run-all build package:chrome package:firefox"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin-ts": "^1.7.2",
