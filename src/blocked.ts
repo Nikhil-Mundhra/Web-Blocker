@@ -1,4 +1,4 @@
-import { VALIDATORS, CounterPeriod } from "./storage";
+import storage, { VALIDATORS, CounterPeriod } from "./storage";
 import getBlockedMessage from "./helpers/get-blocked-message";
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -26,6 +26,21 @@ window.addEventListener("DOMContentLoaded", () => {
     countParams,
   });
 
-  (document.getElementById("message") as HTMLParagraphElement).innerHTML = message;
+  const messageEl = document.getElementById("message") as HTMLParagraphElement | null;
+  if (messageEl) {
+    messageEl.innerHTML = message;
+  }
+
+  const snoozeBtn = document.getElementById("snooze-btn") as HTMLButtonElement | null;
+  if (snoozeBtn) {
+    snoozeBtn.addEventListener("click", () => {
+      // Pause for 1 minute (60 seconds)
+      const oneMinuteFromNow = Date.now() + 60 * 1000;
+      storage.set({ pausedUntil: oneMinuteFromNow }).then(() => {
+        window.location.href = url;
+      });
+    });
+  }
+
   document.body.classList.add("ready");
 });
