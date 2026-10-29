@@ -272,4 +272,125 @@ describe("findRule()", () => {
       });
     });
   });
+
+  describe("literal escaping (\\? and \\*)", () => {
+    it("matches literal ? when escaped with \\?", () => {
+      const blocked = ["example.com/\\?param=*"];
+
+      expect(findRule("https://example.com/?param=123", blocked)).toEqual<Rule>({
+        type: "block",
+        path: "example.com/\\?param=*",
+      });
+
+      // Should NOT match if ? is replaced with another character (not a single-character wildcard)
+      expect(findRule("https://example.com/Xparam=123", blocked)).toBeUndefined();
+    });
+
+    it("matches query strings with escaped question mark in paths", () => {
+      const blocked = ["youtube.com/watch\\?v=*"];
+
+      expect(findRule("https://youtube.com/watch?v=dQw4w9WgXcQ", blocked)).toEqual<Rule>({
+        type: "block",
+        path: "youtube.com/watch\\?v=*",
+      });
+
+      expect(findRule("https://youtube.com/watch!v=dQw4w9WgXcQ", blocked)).toBeUndefined();
+    });
+  });
+
+  describe("regular expression rules (/.../)", () => {
+    it("matches URLs using regex syntax without token mangling", () => {
+      const blocked = ["/.{3,}\\.example\\.com/"];
+
+      expect(findRule("https://dashboard.example.com/", blocked)).toEqual<Rule>({
+        type: "block",
+        path: "/.{3,}\\.example\\.com/",
+      });
+
+      expect(findRule("https://ab.example.com/", blocked)).toBeUndefined();
+    });
+
+    it("supports regex quantifiers like ? and * in regex rules", () => {
+      const blocked = ["/y?google\\.com/"];
+
+      expect(findRule("https://google.com/", blocked)).toEqual<Rule>({
+        type: "block",
+        path: "/y?google\\.com/",
+      });
+
+      expect(findRule("https://ygoogle.com/", blocked)).toEqual<Rule>({
+        type: "block",
+        path: "/y?google\\.com/",
+      });
+    });
+
+    it("supports regex exclusions with !", () => {
+      const rules = [
+        "*.example.com/*",
+        "!/^https?:\\/\\/allowed\\.example\\.com\\/.*/",
+      ];
+
+      expect(findRule("https://blocked.example.com/page", rules)).toEqual<Rule>({
+        type: "block",
+        path: "*.example.com/*",
+      });
+
+      expect(findRule("https://allowed.example.com/page", rules)).toEqual<Rule>({
+        type: "allow",
+        path: "/^https?:\\/\\/allowed\\.example\\.com\\/.*/",
+      });
+    });
+  });
+
+  describe("keyword matching across full URL (Issue #9)", () => {
+    it("blocks keyword rules without requiring trailing slash", () => {
+      const blocked = ["*watch*"];
+
+      expect(findRule("https://www.youtube.com/watch?v=123", blocked)).toEqual<Rule>({
+        type: "block",
+        path: "*watch*",
+      });
+
+      expect(findRule("https://example.com/watch", blocked)).toEqual<Rule>({
+        type: "block",
+        path: "*watch*",
+      });
+    });
+
+    it("matches subdomains using *domain.com* (Issue #7)", () => {
+      const blocked = ["*google.com*"];
+
+      expect(findRule("https://mail.google.com/mail/u/0/", blocked)).toEqual<Rule>({
+        type: "block",
+        path: "*google.com*",
+      });
+
+      expect(findRule("https://google.com/", blocked)).toEqual<Rule>({
+        type: "block",
+        path: "*google.com*",
+      });
+    });
+  });
+
+  describe("tab title matching (Issue #3)", () => {
+    it("matches tab title using title: prefix", () => {
+      const blocked = ["title:*Shorts*"];
+
+      expect(findRule("https://youtube.com/video123", blocked, "Cat Video - YouTube Shorts")).toEqual<Rule>({
+        type: "block",
+        path: "title:*Shorts*",
+      });
+
+      expect(findRule("https://youtube.com/video123", blocked, "Educational Documentary")).toBeUndefined();
+    });
+
+    it("matches wildcard keyword rules against tab title when title is provided", () => {
+      const blocked = ["*Doomscroll*"];
+
+      expect(findRule("https://news.com/article", blocked, "Stop Doomscroll Today")).toEqual<Rule>({
+        type: "block",
+        path: "*Doomscroll*",
+      });
+    });
+  });
 });
