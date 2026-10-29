@@ -16,12 +16,32 @@
     <span>ScrollTax</span>
   </h1>
 
+  <div id="whats-new-banner" class="banner hidden">
+    <div class="banner-content">
+      <strong>✨ What's New in ScrollTax:</strong>
+      <span>Schedule blocking, Approved Sites Only (whitelist) mode, custom redirect URL, break/snooze button, settings lock, disable cooldown, and regex/literal wildcard syntax!</span>
+    </div>
+    <button id="dismiss-whats-new" type="button" class="btn btn-small">Dismiss</button>
+  </div>
+
+  <div id="locked-banner" class="banner locked-banner hidden">
+    <span>🔒 Settings are locked until <strong id="locked-time">--:--</strong> to keep you focused.</span>
+  </div>
+
   <div class="options">
     <div id="enabled-option" class="option">
       <label>Enabled?</label>
       <select id="enabled">
         <option value="YES">Yes</option>
         <option value="NO">No</option>
+      </select>
+    </div>
+
+    <div id="mode-option" class="option">
+      <label>Browsing mode?</label>
+      <select id="mode">
+        <option value="BLOCKLIST">Blocklist (Block listed sites)</option>
+        <option value="WHITELIST">Approved Sites Only (Block all except allowed)</option>
       </select>
     </div>
 
@@ -35,7 +55,10 @@
   </div>
 
   <div id="blocked-container">
-    <div>Sites to block</div>
+    <div class="blocked-header">
+      <span>Sites to block / allow</span>
+      <button id="syntax-help-btn" type="button" class="help-btn" title="Syntax Guide (?)">?</button>
+    </div>
     <textarea id="blocked-list" rows="10" cols="50" spellcheck="false"></textarea>
   </div>
 
@@ -46,9 +69,17 @@
         <select id="resolution">
           <option value="CLOSE_TAB">Close Tab</option>
           <option value="SHOW_BLOCKED_INFO_PAGE">Show Blocked info page</option>
+          <option value="REDIRECT">Redirect to URL</option>
         </select>
 
-        <fieldset id="blocked-info-page-details">
+        <fieldset id="redirect-details" class="sub-fieldset">
+          <div class="option">
+            <label>Redirect to URL:</label>
+            <input type="text" id="redirect-url" placeholder="https://www.google.com" class="text-input" />
+          </div>
+        </fieldset>
+
+        <fieldset id="blocked-info-page-details" class="sub-fieldset">
           <div class="option">
             <label>Show blocked count?</label>
             <select id="counter-show">
@@ -67,6 +98,148 @@
             </select>
           </div>
         </fieldset>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <h3>Block Schedule</h3>
+  <div class="options">
+    <div class="option">
+      <label>Scheduled blocking?</label>
+      <select id="schedule-enabled">
+        <option value="NO">No (Always Active)</option>
+        <option value="YES">Yes (Only during schedule)</option>
+      </select>
+    </div>
+
+    <fieldset id="schedule-details" class="standalone-fieldset">
+      <div class="option">
+        <label>Active Days:</label>
+        <div id="schedule-days" class="days-container">
+          <label class="day-checkbox"><input type="checkbox" value="1"> Mon</label>
+          <label class="day-checkbox"><input type="checkbox" value="2"> Tue</label>
+          <label class="day-checkbox"><input type="checkbox" value="3"> Wed</label>
+          <label class="day-checkbox"><input type="checkbox" value="4"> Thu</label>
+          <label class="day-checkbox"><input type="checkbox" value="5"> Fri</label>
+          <label class="day-checkbox"><input type="checkbox" value="6"> Sat</label>
+          <label class="day-checkbox"><input type="checkbox" value="0"> Sun</label>
+        </div>
+      </div>
+      <div class="option">
+        <label>Time Range:</label>
+        <div class="time-range-inputs">
+          <input type="time" id="schedule-start" value="09:00" class="time-input" />
+          <span>to</span>
+          <input type="time" id="schedule-end" value="17:00" class="time-input" />
+        </div>
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <h3>Focus & Anti-Tamper</h3>
+  <div class="options">
+    <div class="option">
+      <label>Disable Cooldown:</label>
+      <select id="disable-delay">
+        <option value="0">Instant (No delay)</option>
+        <option value="30">30 seconds</option>
+        <option value="60">1 minute</option>
+        <option value="120">2 minutes</option>
+        <option value="300">5 minutes</option>
+      </select>
+    </div>
+
+    <div class="option">
+      <label>Lock settings for focus:</label>
+      <div class="lock-controls">
+        <select id="lock-duration">
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="240">4 hours</option>
+          <option value="480">8 hours</option>
+        </select>
+        <button id="lock-btn" type="button" class="btn btn-secondary">Lock Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Syntax Reference Help Modal -->
+  <div id="syntax-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Syntax Reference Guide</h3>
+        <button id="close-syntax-modal" type="button" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>You can configure rules to block or allow domains, subdomains, specific paths, query parameters, or page titles.</p>
+        
+        <table class="syntax-table">
+          <thead>
+            <tr>
+              <th>Pattern</th>
+              <th>Meaning</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>example.com</code></td>
+              <td>Block domain and any subpages</td>
+              <td><code>reddit.com</code></td>
+            </tr>
+            <tr>
+              <td><code>!rule</code></td>
+              <td>Allow / Exclude from blocking</td>
+              <td><code>!sub.example.com</code></td>
+            </tr>
+            <tr>
+              <td><code>*</code></td>
+              <td>Wildcard: matches 0 or more characters</td>
+              <td><code>*.example.com/*</code>, <code>*shorts*</code></td>
+            </tr>
+            <tr>
+              <td><code>?</code></td>
+              <td>Single character: matches exactly 1 character</td>
+              <td><code>example.com/???/</code></td>
+            </tr>
+            <tr>
+              <td><code>\?</code></td>
+              <td>Literal question mark (for query strings)</td>
+              <td><code>youtube.com/watch\?v=*</code></td>
+            </tr>
+            <tr>
+              <td><code>/regex/</code></td>
+              <td>Regular expression rule</td>
+              <td><code>/.{3,}\.example\.com/</code></td>
+            </tr>
+            <tr>
+              <td><code>title:*word*</code></td>
+              <td>Match against tab / page title</td>
+              <td><code>title:*Shorts*</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="syntax-tip">
+          <strong>Tip:</strong> In <em>Approved Sites Only</em> mode, all websites are blocked except rules prefixed with <code>!</code>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disable Delay Countdown Overlay -->
+  <div id="cooldown-modal" class="modal-backdrop hidden">
+    <div class="modal-card cooldown-card">
+      <h3>Take a breath...</h3>
+      <p>Disabling ScrollTax in <strong id="cooldown-timer">60</strong> seconds.</p>
+      <p class="cooldown-quote">"Focus is a muscle. Are you sure you want to doomscroll?"</p>
+      <div class="modal-actions">
+        <button id="cancel-cooldown-btn" type="button" class="btn btn-primary">Keep It Active</button>
       </div>
     </div>
   </div>
