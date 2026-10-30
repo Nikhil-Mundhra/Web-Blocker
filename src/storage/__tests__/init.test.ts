@@ -56,3 +56,33 @@ test("getRevisitedSchema() returns defaults for any invalid attribute", () => {
     challengeRepeatCount: DEFAULTS.challengeRepeatCount,
   } as Partial<Schema>);
 });
+
+test("initStorage preserves configured timeLimits across restarts", async () => {
+  const existingStorage: Record<string, unknown> = {
+    ...DEFAULTS,
+    timeLimits: { "reddit.com": 30 },
+    dailyUsage: { "2026-10-30": { "reddit.com": 300 } },
+  };
+
+  const mockGet = jest.fn().mockImplementation((keys: string[]) => {
+    const res: Record<string, unknown> = {};
+    keys.forEach((k) => { res[k] = existingStorage[k]; });
+    return Promise.resolve(res);
+  });
+  const mockSet = jest.fn().mockResolvedValue(undefined);
+
+  (global as unknown as { chrome: unknown }).chrome = {
+    storage: {
+      local: {
+        get: mockGet,
+        set: mockSet,
+      },
+    },
+  };
+
+  const initStorage = (await import("../init")).default;
+  await initStorage();
+
+  // Nothing should be overwritten because timeLimits and dailyUsage are valid!
+  expect(mockSet).not.toHaveBeenCalled();
+});
