@@ -2,12 +2,33 @@ import storage, {
   Schema, Resolution, Mode, CounterPeriod, RESOLUTIONS, Schedule, BLOCKED_EXAMPLE, DEFAULTS,
 } from "./storage";
 import { normalizeHost, getTodayKey } from "./helpers/time-limits";
+import { verifySpokenPhrase } from "./helpers/verify-phrase";
+import { convertBlobToWav } from "./helpers/audio-wav";
 import {
   generateSyncKey,
   pushSync,
   pullSync,
   extractSyncPayload,
 } from "./helpers/sync";
+
+interface SpeechRecognitionEvent {
+  results: { [index: number]: { [index: number]: { transcript: string } } }
+}
+
+interface ISpeechRecognition {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onresult: ((event: SpeechRecognitionEvent) => void) | null
+  onerror: (() => void) | null
+  start(): void
+  stop(): void
+}
+
+interface IWindow extends Window {
+  webkitSpeechRecognition?: new () => ISpeechRecognition
+  SpeechRecognition?: new () => ISpeechRecognition
+}
 
 const UI = (() => {
   const elements = {
@@ -43,12 +64,30 @@ const UI = (() => {
     setLimitBtn: document.getElementById("set-limit-btn") as HTMLButtonElement,
     timeLimitsTbody: document.getElementById("time-limits-tbody") as HTMLTableSectionElement,
 
-    // Mirror / Speech Challenge
+    // Mirror / Speech Challenge Settings
     challengePhrase: document.getElementById("challenge-phrase") as HTMLInputElement,
     challengeRepeatCount: document.getElementById("challenge-repeat-count") as HTMLInputElement,
     whisperServerUrl: document.getElementById("whisper-server-url") as HTMLInputElement,
     testWhisperBtn: document.getElementById("test-whisper-btn") as HTMLButtonElement,
     whisperStatusBadge: document.getElementById("whisper-status-badge") as HTMLSpanElement,
+
+    // Mirror of Accountability Modal (for deleting a Daily Time Limit)
+    mirrorModal: document.getElementById("mirror-modal") as HTMLDivElement,
+    closeMirrorBtn: document.getElementById("close-mirror-btn") as HTMLButtonElement,
+    cancelMirrorChallenge: document.getElementById("cancel-mirror-challenge") as HTMLButtonElement,
+    mirrorTargetDomain: document.getElementById("mirror-target-domain") as HTMLElement,
+    requiredRepeatCount: document.getElementById("required-repeat-count") as HTMLElement,
+    challengePhraseDisplay: document.getElementById("challenge-phrase-display") as HTMLDivElement,
+    whisperModalStatus: document.getElementById("whisper-modal-status") as HTMLSpanElement,
+    mirrorVideo: document.getElementById("mirror-video") as HTMLVideoElement,
+    recordingOverlay: document.getElementById("recording-overlay") as HTMLDivElement,
+    verificationStatus: document.getElementById("verification-status") as HTMLDivElement,
+    transcriptDisplay: document.getElementById("transcript-display") as HTMLDivElement,
+    recordBtn: document.getElementById("record-btn") as HTMLButtonElement,
+    toggleTypeBtn: document.getElementById("toggle-type-btn") as HTMLButtonElement,
+    typeFallbackContainer: document.getElementById("type-fallback-container") as HTMLDivElement,
+    typedPhraseInput: document.getElementById("typed-phrase-input") as HTMLTextAreaElement,
+    verifyTypedBtn: document.getElementById("verify-typed-btn") as HTMLButtonElement,
 
     // Cloud Sync
     syncEnabled: document.getElementById("sync-enabled") as HTMLSelectElement,
@@ -349,18 +388,324 @@ const UI = (() => {
       elements.timeLimitsTbody.appendChild(tr);
     });
 
-    // Attach delete listeners
+    // Attach delete listeners (requires passing the Mirror of Accountability)
     elements.timeLimitsTbody.querySelectorAll<HTMLButtonElement>(".delete-limit-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const domain = btn.dataset.domain;
         if (domain && currentTimeLimits[domain]) {
-          const updated = { ...currentTimeLimits };
-          delete updated[domain];
-          storage.set({ timeLimits: updated });
+          openMirrorModalForDelete(domain);
         }
       });
     });
   };
+
+  // Mirror of Accountability Challenge for deleting a Daily Time Limit row
+  let pendingDeleteDomain: string | null = null;
+  let currentStream: MediaStream | null = null;
+  let mediaRecorder: MediaRecorder | null = null;
+  let audioChunks: Blob[] = [];
+  let isRecording = false;
+  let speechRecognitionInstance: ISpeechRecognition | null = null;
+  let fallbackTranscript = "";
+
+  const getActiveChallengeConfig = () => ({
+    targetPhrase: elements.challengePhrase?.value.trim() || DEFAULTS.challengePhrase,
+    requiredCount: Math.max(1, Number(elements.challengeRepeatCount?.value) || DEFAULTS.challengeRepeatCount),
+    whisperUrl: elements.whisperServerUrl?.value.trim() || DEFAULTS.whisperServerUrl,
+  });
+
+  const checkModalWhisper = async () => {
+    if (!elements.whisperModalStatus) return;
+    const { whisperUrl } = getActiveChallengeConfig();
+    try {
+      const resp = await fetch(`${whisperUrl}/health`);
+      if (resp.ok) {
+        elements.whisperModalStatus.textContent = "🟢 MLX-Whisper Ready";
+        elements.whisperModalStatus.className = "server-status-pill online";
+      } else {
+        throw new Error("HTTP error");
+      }
+    } catch {
+      elements.whisperModalStatus.textContent = "⚠️ Whisper Server Offline";
+      elements.whisperModalStatus.className = "server-status-pill offline";
+      elements.whisperModalStatus.title = "Start Whisper via terminal: bash server/start.sh";
+    }
+  };
+
+  const startCamera = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    try {
+      currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      if (elements.mirrorVideo) {
+        elements.mirrorVideo.srcObject = currentStream;
+      }
+    } catch {
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (elements.mirrorVideo) {
+          elements.mirrorVideo.srcObject = currentStream;
+        }
+      } catch {
+        if (elements.verificationStatus) {
+          elements.verificationStatus.textContent = "Camera/microphone access optional. You can still speak or type to verify.";
+        }
+      }
+    }
+  };
+
+  const stopCamera = () => {
+    if (currentStream) {
+      currentStream.getTracks().forEach((track) => track.stop());
+      currentStream = null;
+    }
+    if (speechRecognitionInstance) {
+      try {
+        speechRecognitionInstance.stop();
+      } catch {
+        // Ignore
+      }
+      speechRecognitionInstance = null;
+    }
+    isRecording = false;
+    if (elements.recordBtn) {
+      elements.recordBtn.textContent = "🎙️ Start Speaking";
+      elements.recordBtn.classList.remove("btn-danger");
+    }
+    if (elements.recordingOverlay) {
+      elements.recordingOverlay.classList.add("hidden");
+    }
+  };
+
+  const closeMirrorModal = () => {
+    stopCamera();
+    pendingDeleteDomain = null;
+    if (elements.mirrorModal) {
+      elements.mirrorModal.classList.add("hidden");
+    }
+  };
+
+  const openMirrorModalForDelete = async (domain: string) => {
+    pendingDeleteDomain = domain;
+    const { targetPhrase, requiredCount } = getActiveChallengeConfig();
+
+    if (elements.mirrorTargetDomain) elements.mirrorTargetDomain.textContent = domain;
+    if (elements.challengePhraseDisplay) elements.challengePhraseDisplay.textContent = `"${targetPhrase}"`;
+    if (elements.requiredRepeatCount) elements.requiredRepeatCount.textContent = String(requiredCount);
+
+    if (elements.verificationStatus) {
+      elements.verificationStatus.className = "verification-status";
+      elements.verificationStatus.textContent = "Click \"Start Speaking\" and repeat the phrase.";
+    }
+    if (elements.transcriptDisplay) {
+      elements.transcriptDisplay.textContent = "";
+      elements.transcriptDisplay.classList.add("hidden");
+    }
+    if (elements.typedPhraseInput) {
+      elements.typedPhraseInput.value = "";
+    }
+    if (elements.typeFallbackContainer) {
+      elements.typeFallbackContainer.classList.add("hidden");
+    }
+
+    if (elements.mirrorModal) {
+      elements.mirrorModal.classList.remove("hidden");
+      checkModalWhisper();
+      await startCamera();
+    }
+  };
+
+  if (elements.closeMirrorBtn) elements.closeMirrorBtn.addEventListener("click", closeMirrorModal);
+  if (elements.cancelMirrorChallenge) elements.cancelMirrorChallenge.addEventListener("click", closeMirrorModal);
+
+  const sendToWhisperServer = async (audioBlob: Blob): Promise<string> => {
+    const { whisperUrl } = getActiveChallengeConfig();
+    try {
+      const resp = await fetch(`${whisperUrl}/transcribe`, {
+        method: "POST",
+        headers: { "Content-Type": audioBlob.type || "audio/wav" },
+        body: audioBlob,
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        return data.text || "";
+      }
+    } catch {
+      // Offline or network error
+    }
+    return "";
+  };
+
+  const handleMirrorVerificationResult = (transcript: string) => {
+    const cleanTranscript = transcript.trim();
+    if (!cleanTranscript) {
+      if (elements.verificationStatus) {
+        elements.verificationStatus.className = "verification-status error";
+        elements.verificationStatus.textContent = "No speech detected. Please speak clearly into your microphone or type below.";
+      }
+      return;
+    }
+
+    if (elements.transcriptDisplay) {
+      elements.transcriptDisplay.textContent = `Heard: "${cleanTranscript}"`;
+      elements.transcriptDisplay.classList.remove("hidden");
+    }
+
+    const { targetPhrase, requiredCount } = getActiveChallengeConfig();
+    const verification = verifySpokenPhrase(cleanTranscript, targetPhrase, requiredCount);
+
+    if (verification.verified) {
+      if (elements.verificationStatus) {
+        elements.verificationStatus.className = "verification-status success";
+        elements.verificationStatus.textContent = `${verification.feedback} Removing limit...`;
+      }
+
+      const domainToDelete = pendingDeleteDomain;
+      if (domainToDelete && currentTimeLimits[domainToDelete]) {
+        const updated = { ...currentTimeLimits };
+        delete updated[domainToDelete];
+        storage.set({ timeLimits: updated });
+      }
+
+      closeMirrorModal();
+    } else if (elements.verificationStatus) {
+      elements.verificationStatus.className = "verification-status error";
+      elements.verificationStatus.textContent = verification.feedback;
+    }
+  };
+
+  const startRecording = async () => {
+    audioChunks = [];
+    fallbackTranscript = "";
+    isRecording = true;
+
+    if (elements.recordBtn) {
+      elements.recordBtn.textContent = "⏹️ Stop & Verify";
+      elements.recordBtn.classList.add("btn-danger");
+    }
+    if (elements.recordingOverlay) elements.recordingOverlay.classList.remove("hidden");
+    if (elements.verificationStatus) {
+      elements.verificationStatus.className = "verification-status";
+      elements.verificationStatus.textContent = "Listening... repeat the phrase aloud now.";
+    }
+
+    const win = window as unknown as IWindow;
+    const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
+    if (SpeechRec) {
+      try {
+        speechRecognitionInstance = new SpeechRec();
+        speechRecognitionInstance.continuous = true;
+        speechRecognitionInstance.interimResults = false;
+        speechRecognitionInstance.lang = "en-US";
+        speechRecognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
+          for (let i = 0; i < Object.keys(event.results).length; i++) {
+            fallbackTranscript += " " + event.results[i][0].transcript;
+          }
+        };
+        speechRecognitionInstance.start();
+      } catch {
+        // Fallback speech recognition not available
+      }
+    }
+
+    try {
+      let audioStream: MediaStream;
+      if (currentStream && currentStream.getAudioTracks().length > 0) {
+        audioStream = currentStream;
+      } else {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
+      mediaRecorder = new MediaRecorder(audioStream);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunks.push(e.data);
+        }
+      };
+      mediaRecorder.start();
+    } catch {
+      if (elements.verificationStatus) {
+        elements.verificationStatus.className = "verification-status error";
+        elements.verificationStatus.textContent = "Microphone unavailable. Please allow microphone permissions or use typing below.";
+      }
+    }
+  };
+
+  const stopRecordingAndVerify = async () => {
+    isRecording = false;
+    if (elements.recordBtn) {
+      elements.recordBtn.textContent = "🎙️ Start Speaking";
+      elements.recordBtn.classList.remove("btn-danger");
+    }
+    if (elements.recordingOverlay) elements.recordingOverlay.classList.add("hidden");
+
+    if (speechRecognitionInstance) {
+      try {
+        speechRecognitionInstance.stop();
+      } catch {
+        // Ignore
+      }
+    }
+
+    if (elements.verificationStatus) {
+      elements.verificationStatus.textContent = "Transcribing with OpenAI Whisper...";
+    }
+
+    let finalTranscript = "";
+
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      await new Promise<void>((resolve) => {
+        if (!mediaRecorder) return resolve();
+        mediaRecorder.onstop = () => resolve();
+        mediaRecorder.stop();
+      });
+
+      const rawBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+      let wavBlob: Blob = rawBlob;
+      try {
+        wavBlob = await convertBlobToWav(rawBlob);
+      } catch {
+        // Fallback to rawBlob
+      }
+
+      const whisperResult = await sendToWhisperServer(wavBlob);
+      finalTranscript = (whisperResult || "").trim() || fallbackTranscript.trim();
+    } else {
+      finalTranscript = fallbackTranscript.trim();
+    }
+
+    handleMirrorVerificationResult(finalTranscript);
+  };
+
+  if (elements.recordBtn) {
+    elements.recordBtn.addEventListener("click", () => {
+      if (isRecording) {
+        stopRecordingAndVerify();
+      } else {
+        startRecording();
+      }
+    });
+  }
+
+  if (elements.toggleTypeBtn && elements.typeFallbackContainer) {
+    elements.toggleTypeBtn.addEventListener("click", () => {
+      elements.typeFallbackContainer.classList.toggle("hidden");
+    });
+  }
+
+  if (elements.verifyTypedBtn && elements.typedPhraseInput) {
+    elements.verifyTypedBtn.addEventListener("click", () => {
+      const typedText = elements.typedPhraseInput.value.trim();
+      if (!typedText) {
+        if (elements.verificationStatus) {
+          elements.verificationStatus.className = "verification-status error";
+          elements.verificationStatus.textContent = "Please type the confession phrase first.";
+        }
+        return;
+      }
+      handleMirrorVerificationResult(typedText);
+    });
+  }
 
   elements.setLimitBtn.addEventListener("click", () => {
     const rawDomain = elements.limitDomain.value.trim();

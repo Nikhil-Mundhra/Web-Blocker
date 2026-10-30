@@ -262,10 +262,27 @@ describe("Options Page Integration Test", () => {
     expect(tbody.innerHTML).toContain("reddit.com");
     expect(tbody.innerHTML).toContain("30 min / day");
 
-    // Click delete button
+    // Click delete button -> should open the Mirror of Accountability modal instead of immediately deleting
     const deleteBtn = tbody.querySelector<HTMLButtonElement>(".delete-limit-btn");
+    const mirrorModal = document.getElementById("mirror-modal") as HTMLDivElement;
+    const mirrorTargetDomain = document.getElementById("mirror-target-domain") as HTMLElement;
     expect(deleteBtn).not.toBeNull();
+    expect(mirrorModal.classList.contains("hidden")).toBe(true);
+
+    mockStorageSet.mockClear();
     deleteBtn?.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(mirrorModal.classList.contains("hidden")).toBe(false);
+    expect(mirrorTargetDomain.textContent).toBe("reddit.com");
+    expect(mockStorageSet).not.toHaveBeenCalled();
+
+    // Verify phrase in the Mirror of Accountability to complete deletion
+    const typedInput = document.getElementById("typed-phrase-input") as HTMLTextAreaElement;
+    const verifyTypedBtn = document.getElementById("verify-typed-btn") as HTMLButtonElement;
+    const phrase = DEFAULTS.challengePhrase;
+    typedInput.value = `${phrase}. ${phrase}. ${phrase}.`;
+    verifyTypedBtn.click();
     await new Promise((r) => setTimeout(r, 20));
 
     expect(mockStorageSet).toHaveBeenCalledWith(
@@ -273,6 +290,7 @@ describe("Options Page Integration Test", () => {
         timeLimits: {},
       }),
     );
+    expect(mirrorModal.classList.contains("hidden")).toBe(true);
   });
 
   it("configures Mirror of Accountability phrase and repeat count", async () => {

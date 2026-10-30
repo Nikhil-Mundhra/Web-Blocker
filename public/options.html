@@ -344,6 +344,57 @@
     </div>
   </div>
 
+  <!-- The Mirror of Accountability Modal (Required to delete a Daily Time Limit) -->
+  <div id="mirror-modal" class="modal-backdrop hidden">
+    <div class="modal-card mirror-card">
+      <div class="modal-header">
+        <div class="modal-title-row">
+          <h3>🪞 The Mirror of Accountability</h3>
+          <span id="whisper-modal-status" class="server-status-pill">Checking Whisper...</span>
+        </div>
+        <button id="close-mirror-btn" type="button" class="close-btn">&times;</button>
+      </div>
+
+      <div id="mirror-challenge-section">
+        <p class="mirror-instructions">
+          Look yourself in the eyes. To delete the daily time limit for <strong id="mirror-target-domain">this site</strong>, repeat this phrase
+          <strong id="required-repeat-count">3</strong> times:
+        </p>
+
+        <div id="challenge-phrase-display" class="phrase-display">
+          "I am wasting my time and I need to get back to work"
+        </div>
+
+        <div class="mirror-container">
+          <video id="mirror-video" autoplay playsinline muted></video>
+          <div id="recording-overlay" class="recording-overlay hidden">
+            <span class="pulsing-dot"></span>
+            <span id="recording-status-text">Listening with MLX Whisper...</span>
+          </div>
+        </div>
+
+        <div id="verification-status" class="verification-status">
+          Click "Start Speaking" and repeat the phrase.
+        </div>
+
+        <div id="transcript-display" class="transcript-display hidden"></div>
+
+        <div class="mirror-actions">
+          <button id="record-btn" type="button" class="btn btn-record">🎙️ Start Speaking</button>
+          <button id="cancel-mirror-challenge" type="button" class="btn btn-secondary">Cancel</button>
+        </div>
+
+        <div class="mirror-fallback-section">
+          <button id="toggle-type-btn" type="button" class="text-link-btn">⌨️ Microphone issue? Type phrase manually instead</button>
+          <div id="type-fallback-container" class="type-fallback-container hidden">
+            <textarea id="typed-phrase-input" class="text-input" placeholder="Type the confession phrase here..."></textarea>
+            <button id="verify-typed-btn" type="button" class="btn btn-primary btn-small">Verify Typed Phrase</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <p id="credits">
     Created by <a target="_blank" href="https://github.com/Nikhil-Mundhra">Nikhil Mundhra</a><br>
     Support ScrollTax with a <span id="star">★</span> on <a target="_blank" href="https://github.com/Nikhil-Mundhra/Web-Blocker">GitHub</a>
