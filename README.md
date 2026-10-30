@@ -11,6 +11,19 @@
 
 ---
 
+## 📸 Settings & Screenshots
+
+### General Settings & Blocklist / Whitelist Rules
+<img src="public/screenshots/settings-general.png" width="720" alt="ScrollTax General Settings and Sites to Block/Allow">
+
+### Blocked Page Resolution & Daily Time Limits per Website
+<img src="public/screenshots/settings-time-limits.png" width="720" alt="ScrollTax Blocked Page Resolution and Daily Time Limits per Website">
+
+### The Mirror of Accountability & Local MLX-Whisper Configuration
+<img src="public/screenshots/settings-mirror-whisper.png" width="720" alt="ScrollTax Mirror of Accountability and Local MLX-Whisper Setup">
+
+---
+
 ## ✨ Features
 
 - **⏱️ Daily Time Limits per Website**: Set fine-grained daily minute budgets for specific domains (e.g., `reddit.com: 20 min`, `youtube.com: 30 min`). Active tab browsing is measured in real-time with visual progress bars. Once your daily budget runs out, the site is immediately blocked.
@@ -75,7 +88,7 @@ ScrollTax comes with an integrated, lightweight Python server powered by Apple S
 
 3. **Verify Connection**:
    - Open the **ScrollTax Options** page in your browser.
-   - Under **🪞 The Mirror of Accountability & Speech Verification**, click **"Test Connection"**.
+   - Under **🪞 The Mirror of Accountability (Speech-to-Text Challenge)**, click **"Test Connection"**.
    - You should see a green badge: `🟢 Online (MLX-Whisper)`.
 
 > **Note**: If the local Whisper server is not running, ScrollTax automatically falls back to the browser's native Web Speech Recognition API (`webkitSpeechRecognition`), so the extension remains completely functional.
@@ -88,9 +101,9 @@ Configure daily budgets for distracting sites:
 
 1. Open **Options** (`chrome://extensions` -> ScrollTax Options).
 2. Under **Daily Time Limits per Website**:
-   - Enter a domain (e.g., `reddit.com`, `twitter.com`, `youtube.com`).
-   - Enter your daily minute allowance (e.g., `30`).
-   - Click **Add / Update Limit**.
+   - Enter a domain (e.g., `youtube.com` or `reddit.com`).
+   - Enter your daily minute allowance (e.g., `15`).
+   - Click **Set Limit**.
 3. ScrollTax tracks your active browsing time on that domain in real-time:
    - Green / Yellow / Red visual progress indicator bars.
    - Shows consumed minutes vs. total daily budget.
