@@ -104,6 +104,32 @@
   margin-bottom: 14px;
 }
 
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.server-status-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.server-status-pill.online {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.server-status-pill.offline {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .modal-header h3 {
   margin: 0;
   font-size: 18px;
@@ -224,6 +250,44 @@
   display: flex;
   gap: 12px;
   justify-content: center;
+}
+
+.mirror-fallback-section {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.text-link-btn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px;
+}
+
+.text-link-btn:hover {
+  color: #1d4ed8;
+}
+
+.type-fallback-container {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.type-fallback-container textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 60px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
 }
 
 .btn {

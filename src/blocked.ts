@@ -1,6 +1,7 @@
 import storage, { VALIDATORS, CounterPeriod } from "./storage";
 import { normalizeHost } from "./helpers/time-limits";
 import { verifySpokenPhrase } from "./helpers/verify-phrase";
+import { convertBlobToWav } from "./helpers/audio-wav";
 
 // Minimal browser speech recognition interface
 interface SpeechRecognitionEvent {
@@ -85,11 +86,17 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   const phraseDisplay = document.getElementById("challenge-phrase-display") as HTMLDivElement | null;
   const repeatCountEl = document.getElementById("required-repeat-count") as HTMLElement | null;
+  const whisperModalStatus = document.getElementById("whisper-modal-status") as HTMLSpanElement | null;
   const mirrorVideo = document.getElementById("mirror-video") as HTMLVideoElement | null;
   const recordingOverlay = document.getElementById("recording-overlay") as HTMLDivElement | null;
   const verificationStatus = document.getElementById("verification-status") as HTMLDivElement | null;
   const transcriptDisplay = document.getElementById("transcript-display") as HTMLDivElement | null;
   const recordBtn = document.getElementById("record-btn") as HTMLButtonElement | null;
+
+  const toggleTypeBtn = document.getElementById("toggle-type-btn") as HTMLButtonElement | null;
+  const typeContainer = document.getElementById("type-fallback-container") as HTMLDivElement | null;
+  const typedInput = document.getElementById("typed-phrase-input") as HTMLTextAreaElement | null;
+  const verifyTypedBtn = document.getElementById("verify-typed-btn") as HTMLButtonElement | null;
 
   const challengeSection = document.getElementById("mirror-challenge-section") as HTMLDivElement | null;
   const extensionScreen = document.getElementById("extension-screen") as HTMLDivElement | null;
@@ -141,6 +148,23 @@ window.addEventListener("DOMContentLoaded", async () => {
     catchMeBtn.style.top = `${randomTop}px`;
   };
 
+  const checkModalWhisper = async () => {
+    if (!whisperModalStatus) return;
+    try {
+      const resp = await fetch(`${whisperUrl}/health`);
+      if (resp.ok) {
+        whisperModalStatus.textContent = "🟢 MLX-Whisper Ready";
+        whisperModalStatus.className = "server-status-pill online";
+      } else {
+        throw new Error("HTTP error");
+      }
+    } catch {
+      whisperModalStatus.textContent = "⚠️ Whisper Server Offline";
+      whisperModalStatus.className = "server-status-pill offline";
+      whisperModalStatus.title = "Start Whisper via terminal: bash server/start.sh";
+    }
+  };
+
   if (catchMeBtn) {
     catchMeBtn.addEventListener("mouseenter", moveButtonRandomly);
     catchMeBtn.addEventListener("mousemove", moveButtonRandomly);
@@ -148,6 +172,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     catchMeBtn.addEventListener("click", async () => {
       if (mirrorModal) {
         mirrorModal.classList.remove("hidden");
+        checkModalWhisper();
         await startCamera();
       }
     });
@@ -162,8 +187,15 @@ window.addEventListener("DOMContentLoaded", async () => {
         mirrorVideo.srcObject = currentStream;
       }
     } catch {
-      if (verificationStatus) {
-        verificationStatus.textContent = "Camera/microphone access optional. You can still speak to verify.";
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (mirrorVideo) {
+          mirrorVideo.srcObject = currentStream;
+        }
+      } catch {
+        if (verificationStatus) {
+          verificationStatus.textContent = "Camera/microphone access optional. You can still speak or type to verify.";
+        }
       }
     }
   };
@@ -190,7 +222,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     try {
       const resp = await fetch(`${whisperUrl}/transcribe`, {
         method: "POST",
-        headers: { "Content-Type": audioBlob.type || "audio/webm" },
+        headers: { "Content-Type": audioBlob.type || "audio/wav" },
         body: audioBlob,
       });
 
@@ -216,7 +248,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (recordingOverlay) recordingOverlay.classList.remove("hidden");
     if (verificationStatus) {
       verificationStatus.className = "verification-status";
-      verificationStatus.textContent = "Listening... repeat the phrase now.";
+      verificationStatus.textContent = "Listening... repeat the phrase aloud now.";
     }
 
     // Set up Web Speech API as simultaneous fallback
@@ -240,7 +272,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      const audioStream = currentStream || await navigator.mediaDevices.getUserMedia({ audio: true });
+      let audioStream: MediaStream;
+      if (currentStream && currentStream.getAudioTracks().length > 0) {
+        audioStream = currentStream;
+      } else {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
       mediaRecorder = new MediaRecorder(audioStream);
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -249,7 +287,46 @@ window.addEventListener("DOMContentLoaded", async () => {
       };
       mediaRecorder.start();
     } catch {
-      // Audio capture error
+      if (verificationStatus) {
+        verificationStatus.className = "verification-status error";
+        verificationStatus.textContent = "Microphone unavailable. Please allow microphone permissions or use typing below.";
+      }
+    }
+  };
+
+  const handleVerificationResult = (transcript: string) => {
+    const cleanTranscript = transcript.trim();
+    if (!cleanTranscript) {
+      if (verificationStatus) {
+        verificationStatus.className = "verification-status error";
+        verificationStatus.textContent = "No speech detected. Please speak clearly into your microphone or type below.";
+      }
+      return;
+    }
+
+    if (transcriptDisplay) {
+      transcriptDisplay.textContent = `Heard: "${cleanTranscript}"`;
+      transcriptDisplay.classList.remove("hidden");
+    }
+
+    const verification = verifySpokenPhrase(cleanTranscript, targetPhrase, requiredCount);
+
+    if (verification.verified) {
+      if (verificationStatus) {
+        verificationStatus.className = "verification-status success";
+        verificationStatus.textContent = verification.feedback;
+      }
+
+      // Transition to Extension Options screen
+      setTimeout(() => {
+        if (challengeSection) challengeSection.classList.add("hidden");
+        if (extensionScreen) extensionScreen.classList.remove("hidden");
+      }, 700);
+    } else {
+      if (verificationStatus) {
+        verificationStatus.className = "verification-status error";
+        verificationStatus.textContent = verification.feedback;
+      }
     }
   };
 
@@ -282,45 +359,21 @@ window.addEventListener("DOMContentLoaded", async () => {
         mediaRecorder.stop();
       });
 
-      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-      const whisperResult = await sendToWhisperServer(audioBlob);
-      finalTranscript = whisperResult || fallbackTranscript;
+      const rawBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+      let wavBlob: Blob = rawBlob;
+      try {
+        wavBlob = await convertBlobToWav(rawBlob);
+      } catch {
+        // Fallback to rawBlob if Web Audio conversion unavailable
+      }
+
+      const whisperResult = await sendToWhisperServer(wavBlob);
+      finalTranscript = (whisperResult || "").trim() || fallbackTranscript.trim();
     } else {
-      finalTranscript = fallbackTranscript;
+      finalTranscript = fallbackTranscript.trim();
     }
 
-    if (!finalTranscript.trim()) {
-      if (verificationStatus) {
-        verificationStatus.className = "verification-status error";
-        verificationStatus.textContent = "No speech detected. Please check microphone permissions and try again.";
-      }
-      return;
-    }
-
-    if (transcriptDisplay) {
-      transcriptDisplay.textContent = `Heard: "${finalTranscript.trim()}"`;
-      transcriptDisplay.classList.remove("hidden");
-    }
-
-    const verification = verifySpokenPhrase(finalTranscript, targetPhrase, requiredCount);
-
-    if (verification.verified) {
-      if (verificationStatus) {
-        verificationStatus.className = "verification-status success";
-        verificationStatus.textContent = verification.feedback;
-      }
-
-      // Transition to Extension Options screen
-      setTimeout(() => {
-        if (challengeSection) challengeSection.classList.add("hidden");
-        if (extensionScreen) extensionScreen.classList.remove("hidden");
-      }, 700);
-    } else {
-      if (verificationStatus) {
-        verificationStatus.className = "verification-status error";
-        verificationStatus.textContent = verification.feedback;
-      }
-    }
+    handleVerificationResult(finalTranscript);
   };
 
   if (recordBtn) {
@@ -330,6 +383,27 @@ window.addEventListener("DOMContentLoaded", async () => {
       } else {
         startRecording();
       }
+    });
+  }
+
+  // Fallback: Type phrase manually
+  if (toggleTypeBtn && typeContainer) {
+    toggleTypeBtn.addEventListener("click", () => {
+      typeContainer.classList.toggle("hidden");
+    });
+  }
+
+  if (verifyTypedBtn && typedInput) {
+    verifyTypedBtn.addEventListener("click", () => {
+      const typedText = typedInput.value.trim();
+      if (!typedText) {
+        if (verificationStatus) {
+          verificationStatus.className = "verification-status error";
+          verificationStatus.textContent = "Please type the confession phrase first.";
+        }
+        return;
+      }
+      handleVerificationResult(typedText);
     });
   }
 

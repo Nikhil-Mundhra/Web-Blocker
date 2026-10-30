@@ -28,7 +28,10 @@
   <div id="mirror-modal" class="modal-backdrop hidden">
     <div class="modal-card mirror-card">
       <div class="modal-header">
-        <h3>🪞 The Mirror of Accountability</h3>
+        <div class="modal-title-row">
+          <h3>🪞 The Mirror of Accountability</h3>
+          <span id="whisper-modal-status" class="server-status-pill">Checking Whisper...</span>
+        </div>
         <button id="close-mirror-btn" type="button" class="close-btn">&times;</button>
       </div>
 
@@ -59,6 +62,14 @@
         <div class="mirror-actions">
           <button id="record-btn" type="button" class="btn btn-record">🎙️ Start Speaking</button>
           <button id="cancel-mirror-challenge" type="button" class="btn btn-secondary">Close</button>
+        </div>
+
+        <div class="mirror-fallback-section">
+          <button id="toggle-type-btn" type="button" class="text-link-btn">⌨️ Microphone issue? Type phrase manually instead</button>
+          <div id="type-fallback-container" class="type-fallback-container hidden">
+            <textarea id="typed-phrase-input" class="text-input" placeholder="Type the confession phrase here..."></textarea>
+            <button id="verify-typed-btn" type="button" class="btn btn-primary btn-small">Verify Typed Phrase</button>
+          </div>
         </div>
       </div>
 
