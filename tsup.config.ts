@@ -23,6 +23,7 @@ export default defineConfig({
   onSuccess: () => new Promise((resolve, reject) => {
     const files = [
       "icon_32.png",
+      "icon_64.png",
       "icon_128.png",
       "common.css",
       "blocked.css",
