@@ -50,6 +50,10 @@ export interface Schema {
   challengePhrase: string
   challengeRepeatCount: number
   whisperServerUrl: string
+  syncEnabled: boolean
+  syncKey: string
+  syncServerUrl: string
+  lastSyncedAt: number | null
 }
 
 export const DEFAULT_SCHEDULE: Readonly<Schedule> = {
@@ -82,6 +86,10 @@ export const DEFAULTS: Readonly<Schema> = {
   challengePhrase: "I am wasting my time and I need to get back to work",
   challengeRepeatCount: 3,
   whisperServerUrl: "http://127.0.0.1:8765",
+  syncEnabled: false,
+  syncKey: "",
+  syncServerUrl: "http://127.0.0.1:8765/sync",
+  lastSyncedAt: null,
 };
 
 export const VALIDATORS: Readonly<Record<keyof Schema, (value: unknown) => boolean>> = {
@@ -114,6 +122,10 @@ export const VALIDATORS: Readonly<Record<keyof Schema, (value: unknown) => boole
   challengePhrase: (value) => typeof value === "string" && value.trim().length > 0,
   challengeRepeatCount: (value) => typeof value === "number" && value >= 1,
   whisperServerUrl: (value) => typeof value === "string",
+  syncEnabled: (value) => typeof value === "boolean",
+  syncKey: (value) => typeof value === "string",
+  syncServerUrl: (value) => typeof value === "string",
+  lastSyncedAt: (value) => value === null || typeof value === "number",
 };
 
 export const BLOCKED_EXAMPLE: string[] = [

@@ -21,19 +21,31 @@ window.addEventListener("DOMContentLoaded", async () => {
   const resumeBtn = document.getElementById("resume-btn") as HTMLButtonElement;
   const optionsLink = document.getElementById("options-link") as HTMLAnchorElement;
 
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const tabUrl = activeTab?.url || "";
-  const tabId = activeTab?.id;
-  const isHttp = tabUrl.startsWith("http://") || tabUrl.startsWith("https://");
+  document.body.classList.add("ready");
 
+  let tabUrl = "";
+  let tabId: number | undefined;
+  let isHttp = false;
   let parsedHost = "";
+
   try {
-    parsedHost = isHttp ? new URL(tabUrl).host : "";
-  } catch {
-    parsedHost = "";
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    tabUrl = activeTab?.url || "";
+    tabId = activeTab?.id;
+    isHttp = tabUrl.startsWith("http://") || tabUrl.startsWith("https://");
+
+    if (isHttp) {
+      try {
+        parsedHost = new URL(tabUrl).host;
+      } catch {
+        parsedHost = "";
+      }
+    }
+  } catch (err) {
+    console.warn("Could not query active tab:", err);
   }
 
-  currentUrlEl.textContent = parsedHost || (isHttp ? removeProtocol(tabUrl) : "Not a webpage");
+  currentUrlEl.textContent = parsedHost || (isHttp ? removeProtocol(tabUrl) : "ScrollTax Focus");
 
   if (!isHttp || !tabId) {
     blockPageBtn.disabled = true;
@@ -118,11 +130,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
-  await updateState();
-  document.body.classList.add("ready");
+  try {
+    await updateState();
+  } catch (err) {
+    console.warn("Error running updateState in popup:", err);
+  }
 
   const timer = setInterval(() => {
-    updateState();
+    updateState().catch((err) => console.warn("Error in popup timer:", err));
   }, 1000);
 
   window.addEventListener("unload", () => {

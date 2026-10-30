@@ -9,6 +9,11 @@ import {
   getTimeRemaining,
   isSiteExtensionActive,
 } from "./helpers/time-limits";
+import {
+  pushSync,
+  pullSync,
+  extractSyncPayload,
+} from "./helpers/sync";
 
 let __enabled: boolean;
 let __contextMenu: boolean;
@@ -17,9 +22,60 @@ let __timeLimits: Record<string, number> = {};
 let __dailyUsage: Record<string, Record<string, number>> = {};
 let __siteExtensions: Record<string, number> = {};
 
+let __syncEnabled = false;
+let __syncKey = "";
+let __syncServerUrl = "http://127.0.0.1:8765/sync";
+let __lastSyncedAt: number | null = null;
+let __syncPushTimeout: NodeJS.Timeout | null = null;
+
 let __activeTabId: number | null = null;
 let __activeUrl: string | null = null;
 let __windowFocused = true;
+
+const pullRemoteSync = async () => {
+  if (!__syncEnabled || !__syncKey) return;
+  try {
+    const res = await pullSync(__syncKey, __syncServerUrl);
+    if (res.ok && res.data && res.data.updatedAt > (__lastSyncedAt || 0)) {
+      const remote = res.data;
+      __lastSyncedAt = remote.updatedAt;
+      await storage.set({
+        blocked: remote.blocked,
+        mode: remote.mode,
+        timeLimits: remote.timeLimits,
+        challengePhrase: remote.challengePhrase,
+        challengeRepeatCount: remote.challengeRepeatCount,
+        schedule: remote.schedule,
+        resolution: remote.resolution,
+        redirectUrl: remote.redirectUrl,
+        disableDelay: remote.disableDelay,
+        blockByTitle: remote.blockByTitle,
+        lastSyncedAt: remote.updatedAt,
+      });
+    }
+  } catch (err) {
+    console.warn("Background sync pull error:", err);
+  }
+};
+
+const triggerDebouncedPush = () => {
+  if (!__syncEnabled || !__syncKey) return;
+  if (__syncPushTimeout) clearTimeout(__syncPushTimeout);
+
+  __syncPushTimeout = setTimeout(async () => {
+    try {
+      const all = await storage.getAll();
+      const payload = extractSyncPayload(all);
+      const res = await pushSync(__syncKey, __syncServerUrl, payload);
+      if (res.ok) {
+        __lastSyncedAt = payload.updatedAt;
+        await storage.set({ lastSyncedAt: payload.updatedAt });
+      }
+    } catch (err) {
+      console.warn("Background sync push error:", err);
+    }
+  }, 2500);
+};
 
 initStorage().then(() => {
   storage.get([
@@ -29,15 +85,35 @@ initStorage().then(() => {
     "timeLimits",
     "dailyUsage",
     "siteExtensions",
-  ]).then(({ enabled, contextMenu, blocked, timeLimits, dailyUsage, siteExtensions }) => {
+    "syncEnabled",
+    "syncKey",
+    "syncServerUrl",
+    "lastSyncedAt",
+  ]).then(({
+    enabled,
+    contextMenu,
+    blocked,
+    timeLimits,
+    dailyUsage,
+    siteExtensions,
+    syncEnabled,
+    syncKey,
+    syncServerUrl,
+    lastSyncedAt,
+  }) => {
     __enabled = enabled;
     __contextMenu = contextMenu;
     __blocked = blocked;
     __timeLimits = timeLimits || {};
     __dailyUsage = dailyUsage || {};
     __siteExtensions = siteExtensions || {};
+    __syncEnabled = Boolean(syncEnabled);
+    __syncKey = syncKey || "";
+    __syncServerUrl = syncServerUrl || "http://127.0.0.1:8765/sync";
+    __lastSyncedAt = lastSyncedAt || null;
 
     recreateContextMenu(__enabled && __contextMenu);
+    pullRemoteSync();
   });
 
   chrome.storage.local.onChanged.addListener((changes) => {
@@ -69,11 +145,47 @@ initStorage().then(() => {
       __siteExtensions = (changes["siteExtensions"].newValue as Record<string, number>) || {};
     }
 
+    if (changes["syncEnabled"]) {
+      __syncEnabled = Boolean(changes["syncEnabled"].newValue);
+    }
+
+    if (changes["syncKey"]) {
+      __syncKey = (changes["syncKey"].newValue as string) || "";
+    }
+
+    if (changes["syncServerUrl"]) {
+      __syncServerUrl = (changes["syncServerUrl"].newValue as string) || "http://127.0.0.1:8765/sync";
+    }
+
+    if (changes["lastSyncedAt"]) {
+      __lastSyncedAt = (changes["lastSyncedAt"].newValue as number) || null;
+    }
+
     if (changes["timeLimits"] || changes["dailyUsage"] || changes["siteExtensions"]) {
       updateBadgeForTab(__activeTabId, __activeUrl);
     }
+
+    const syncTriggers = [
+      "blocked",
+      "mode",
+      "timeLimits",
+      "challengePhrase",
+      "challengeRepeatCount",
+      "schedule",
+      "resolution",
+      "redirectUrl",
+      "disableDelay",
+      "blockByTitle",
+    ];
+
+    if (syncTriggers.some((k) => changes[k])) {
+      triggerDebouncedPush();
+    }
   });
 });
+
+// Periodic background sync pull every 10 minutes
+setInterval(pullRemoteSync, 10 * 60 * 1000);
 
 chrome.runtime.onInstalled.addListener((details) => {
   try {

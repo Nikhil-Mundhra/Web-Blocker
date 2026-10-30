@@ -16,6 +16,23 @@ import numpy as np
 # Default port and model
 PORT = int(os.environ.get("PORT", 8765))
 MODEL_REPO = os.environ.get("WHISPER_MODEL", "mlx-community/whisper-small-mlx")
+SYNC_STORE_PATH = os.path.join(os.path.dirname(__file__), "sync_store.json")
+
+# In-memory and disk sync store
+SYNC_STORE = {}
+if os.path.exists(SYNC_STORE_PATH):
+    try:
+        with open(SYNC_STORE_PATH, "r") as f:
+            SYNC_STORE = json.load(f)
+    except Exception as e:
+        print(f"Notice: Could not load sync_store.json: {e}")
+
+def save_sync_store():
+    try:
+        with open(SYNC_STORE_PATH, "w") as f:
+            json.dump(SYNC_STORE, f)
+    except Exception as e:
+        print(f"Notice: Could not save sync_store.json: {e}")
 
 try:
     import mlx_whisper
@@ -92,7 +109,8 @@ class WhisperRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == "/" or self.path == "/health":
+        clean_path = self.path.split("?")[0].rstrip("/")
+        if clean_path == "" or clean_path == "/health":
             self.send_response(200)
             self._send_cors_headers()
             self.send_header("Content-Type", "application/json")
@@ -101,15 +119,31 @@ class WhisperRequestHandler(BaseHTTPRequestHandler):
                 "status": "ok",
                 "engine": "mlx-whisper" if HAS_MLX else "mock",
                 "model": MODEL_REPO,
-                "message": "ScrollTax MLX-Whisper Server Active"
+                "message": "ScrollTax MLX-Whisper & Sync Server Active"
             }
             self.wfile.write(json.dumps(response).encode("utf-8"))
+        elif clean_path.startswith("/sync/"):
+            key_id = clean_path[len("/sync/"):]
+            if key_id in SYNC_STORE:
+                self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(SYNC_STORE[key_id]).encode("utf-8"))
+            else:
+                self.send_response(404)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Sync record not found"}).encode("utf-8"))
         else:
             self.send_response(404)
+            self._send_cors_headers()
             self.end_headers()
 
     def do_POST(self):
-        if self.path == "/transcribe":
+        clean_path = self.path.split("?")[0].rstrip("/")
+        if clean_path == "/transcribe":
             try:
                 content_len = int(self.headers.get("Content-Length", 0))
                 audio_data = self.rfile.read(content_len)
@@ -146,8 +180,44 @@ class WhisperRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+        elif clean_path.startswith("/sync/"):
+            key_id = clean_path[len("/sync/"):]
+            try:
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len)
+                data = json.loads(body.decode("utf-8"))
+
+                if "iv" not in data or "ciphertext" not in data:
+                    self.send_response(400)
+                    self._send_cors_headers()
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Missing iv or ciphertext"}).encode("utf-8"))
+                    return
+
+                SYNC_STORE[key_id] = {
+                    "iv": data["iv"],
+                    "ciphertext": data["ciphertext"],
+                    "updatedAt": data.get("updatedAt", 0)
+                }
+                save_sync_store()
+
+                self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "ok", "keyId": key_id}).encode("utf-8"))
+
+            except Exception as e:
+                print(f"Error storing sync payload: {e}")
+                self.send_response(500)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
         else:
             self.send_response(404)
+            self._send_cors_headers()
             self.end_headers()
 
     def log_message(self, format, *args):

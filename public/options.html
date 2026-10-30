@@ -202,6 +202,44 @@
 
   <div class="section-divider"></div>
 
+  <h3>☁️ Cross-Browser Cloud Sync</h3>
+  <div class="options">
+    <div class="option">
+      <label>Sync across browsers?</label>
+      <select id="sync-enabled">
+        <option value="NO">No (Local Only)</option>
+        <option value="YES">Yes (Encrypted Sync)</option>
+      </select>
+    </div>
+
+    <fieldset id="sync-details" class="standalone-fieldset">
+      <div class="option baseline">
+        <label>Your Sync Key:</label>
+        <div class="sync-key-row">
+          <input type="password" id="sync-key-input" class="text-input font-mono" placeholder="Generate key or paste existing" spellcheck="false" style="min-width: 280px;" />
+          <button id="toggle-key-visibility-btn" type="button" class="btn btn-secondary">👁 Show</button>
+          <button id="copy-sync-key-btn" type="button" class="btn btn-secondary">📋 Copy</button>
+          <button id="generate-sync-key-btn" type="button" class="btn btn-secondary">⚡ Generate New</button>
+        </div>
+      </div>
+
+      <div class="option baseline">
+        <label>Sync Server URL:</label>
+        <div class="sync-server-row">
+          <input type="text" id="sync-server-url" class="text-input" value="http://127.0.0.1:8765/sync" style="min-width: 280px;" />
+          <button id="sync-now-btn" type="button" class="btn btn-primary">🔄 Sync Now</button>
+          <span id="sync-status-badge" class="badge inactive">Not synced</span>
+        </div>
+      </div>
+
+      <div class="whisper-info-card">
+        <strong>Zero-Knowledge End-to-End Encryption:</strong> Your blocked rules, daily limits, schedules, and accountability phrases are encrypted on your device with <strong>AES-GCM (256-bit)</strong> before uploading. The server cannot read your data. Paste this Sync Key into Opera GX, Vivaldi, Firefox, or Chrome to keep your rules identical across all browsers.
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="section-divider"></div>
+
   <h3>Focus & Anti-Tamper</h3>
   <div class="options">
     <div class="option">

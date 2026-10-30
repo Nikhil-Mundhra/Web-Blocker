@@ -2,6 +2,12 @@ import storage, {
   Schema, Resolution, Mode, CounterPeriod, RESOLUTIONS, Schedule, BLOCKED_EXAMPLE, DEFAULTS,
 } from "./storage";
 import { normalizeHost, getTodayKey } from "./helpers/time-limits";
+import {
+  generateSyncKey,
+  pushSync,
+  pullSync,
+  extractSyncPayload,
+} from "./helpers/sync";
 
 const UI = (() => {
   const elements = {
@@ -43,6 +49,16 @@ const UI = (() => {
     whisperServerUrl: document.getElementById("whisper-server-url") as HTMLInputElement,
     testWhisperBtn: document.getElementById("test-whisper-btn") as HTMLButtonElement,
     whisperStatusBadge: document.getElementById("whisper-status-badge") as HTMLSpanElement,
+
+    // Cloud Sync
+    syncEnabled: document.getElementById("sync-enabled") as HTMLSelectElement,
+    syncKeyInput: document.getElementById("sync-key-input") as HTMLInputElement,
+    toggleKeyVisibilityBtn: document.getElementById("toggle-key-visibility-btn") as HTMLButtonElement,
+    copySyncKeyBtn: document.getElementById("copy-sync-key-btn") as HTMLButtonElement,
+    generateSyncKeyBtn: document.getElementById("generate-sync-key-btn") as HTMLButtonElement,
+    syncServerUrl: document.getElementById("sync-server-url") as HTMLInputElement,
+    syncNowBtn: document.getElementById("sync-now-btn") as HTMLButtonElement,
+    syncStatusBadge: document.getElementById("sync-status-badge") as HTMLSpanElement,
   };
 
   elements.blockedList.placeholder = BLOCKED_EXAMPLE.join("\n");
@@ -399,6 +415,128 @@ const UI = (() => {
     checkWhisperHealth(elements.whisperServerUrl.value.trim() || "http://127.0.0.1:8765");
   });
 
+  // 14. Cloud Sync Settings
+  elements.syncEnabled.addEventListener("change", (e) => {
+    const isSyncEnabled = stringToBoolean(getEventTargetValue(e));
+    document.body.classList.toggle("sync-enabled", isSyncEnabled);
+    if (isSyncEnabled && !elements.syncKeyInput.value.trim()) {
+      const newKey = generateSyncKey();
+      elements.syncKeyInput.value = newKey;
+      storage.set({ syncEnabled: true, syncKey: newKey });
+    } else {
+      storage.set({ syncEnabled: isSyncEnabled });
+    }
+  });
+
+  elements.syncKeyInput.addEventListener("change", (e) => {
+    const syncKey = (e.target as HTMLInputElement).value.trim();
+    storage.set({ syncKey });
+  });
+
+  elements.toggleKeyVisibilityBtn.addEventListener("click", () => {
+    if (elements.syncKeyInput.type === "password") {
+      elements.syncKeyInput.type = "text";
+      elements.toggleKeyVisibilityBtn.textContent = "🙈 Hide";
+    } else {
+      elements.syncKeyInput.type = "password";
+      elements.toggleKeyVisibilityBtn.textContent = "👁 Show";
+    }
+  });
+
+  elements.copySyncKeyBtn.addEventListener("click", async () => {
+    const key = elements.syncKeyInput.value.trim();
+    if (!key) return;
+    try {
+      await navigator.clipboard.writeText(key);
+      const originalText = elements.copySyncKeyBtn.textContent;
+      elements.copySyncKeyBtn.textContent = "✅ Copied!";
+      setTimeout(() => {
+        elements.copySyncKeyBtn.textContent = originalText;
+      }, 2000);
+    } catch {
+      elements.syncKeyInput.select();
+      document.execCommand("copy");
+    }
+  });
+
+  elements.generateSyncKeyBtn.addEventListener("click", () => {
+    if (
+      elements.syncKeyInput.value.trim()
+      && !confirm("Generating a new key unlinks this browser from other browsers unless you copy it there. Generate anyway?")
+    ) {
+      return;
+    }
+    const newKey = generateSyncKey();
+    elements.syncKeyInput.value = newKey;
+    storage.set({ syncKey: newKey });
+  });
+
+  elements.syncServerUrl.addEventListener("change", (e) => {
+    const syncServerUrl = (e.target as HTMLInputElement).value.trim() || "http://127.0.0.1:8765/sync";
+    storage.set({ syncServerUrl });
+  });
+
+  const performManualSync = async () => {
+    const key = elements.syncKeyInput.value.trim();
+    const serverUrl = elements.syncServerUrl.value.trim() || "http://127.0.0.1:8765/sync";
+
+    if (!key) {
+      elements.syncStatusBadge.textContent = "⚠️ No Sync Key set";
+      elements.syncStatusBadge.className = "badge paused";
+      return;
+    }
+
+    elements.syncStatusBadge.textContent = "⏳ Syncing...";
+    elements.syncStatusBadge.className = "badge paused";
+
+    const allLocal = await storage.getAll();
+    const pullRes = await pullSync(key, serverUrl);
+
+    if (!pullRes.ok) {
+      elements.syncStatusBadge.textContent = `🔴 Failed: ${pullRes.error || "Connection error"}`;
+      elements.syncStatusBadge.className = "badge inactive";
+      return;
+    }
+
+    const localLastSynced = allLocal.lastSyncedAt || 0;
+    const remoteData = pullRes.data;
+
+    if (remoteData && remoteData.updatedAt > localLastSynced) {
+      // Remote is newer, apply to local
+      await storage.set({
+        blocked: remoteData.blocked,
+        mode: remoteData.mode,
+        timeLimits: remoteData.timeLimits,
+        challengePhrase: remoteData.challengePhrase,
+        challengeRepeatCount: remoteData.challengeRepeatCount,
+        schedule: remoteData.schedule,
+        resolution: remoteData.resolution,
+        redirectUrl: remoteData.redirectUrl,
+        disableDelay: remoteData.disableDelay,
+        blockByTitle: remoteData.blockByTitle,
+        lastSyncedAt: remoteData.updatedAt,
+      });
+      elements.syncStatusBadge.textContent = "🟢 Pulled from cloud";
+      elements.syncStatusBadge.className = "badge";
+    } else {
+      // Local is newer or remote is empty, push local to remote
+      const payload = extractSyncPayload(allLocal);
+      const pushRes = await pushSync(key, serverUrl, payload);
+      if (pushRes.ok) {
+        await storage.set({ lastSyncedAt: payload.updatedAt });
+        elements.syncStatusBadge.textContent = "🟢 Pushed to cloud";
+        elements.syncStatusBadge.className = "badge";
+      } else {
+        elements.syncStatusBadge.textContent = `🔴 Push failed: ${pushRes.error || "Unknown"}`;
+        elements.syncStatusBadge.className = "badge inactive";
+      }
+    }
+  };
+
+  elements.syncNowBtn.addEventListener("click", () => {
+    performManualSync();
+  });
+
   const init = <T extends Partial<Schema>>(items: T) => {
     if (items.whatsNewDismissed !== undefined) {
       elements.whatsNewBanner.classList.toggle("hidden", items.whatsNewDismissed);
@@ -491,6 +629,30 @@ const UI = (() => {
       elements.whisperServerUrl.value = items.whisperServerUrl;
       checkWhisperHealth(items.whisperServerUrl);
     }
+
+    if (items.syncEnabled !== undefined) {
+      elements.syncEnabled.value = booleanToString(items.syncEnabled);
+      document.body.classList.toggle("sync-enabled", items.syncEnabled);
+    }
+
+    if (items.syncKey !== undefined) {
+      elements.syncKeyInput.value = items.syncKey;
+    }
+
+    if (items.syncServerUrl !== undefined) {
+      elements.syncServerUrl.value = items.syncServerUrl;
+    }
+
+    if (items.lastSyncedAt !== undefined) {
+      if (items.lastSyncedAt) {
+        const timeStr = new Date(items.lastSyncedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        elements.syncStatusBadge.textContent = `🟢 Synced (${timeStr})`;
+        elements.syncStatusBadge.className = "badge";
+      } else {
+        elements.syncStatusBadge.textContent = "Not synced";
+        elements.syncStatusBadge.className = "badge inactive";
+      }
+    }
   };
 
   return { elements, init };
@@ -526,6 +688,10 @@ window.addEventListener("DOMContentLoaded", () => {
     "challengePhrase",
     "challengeRepeatCount",
     "whisperServerUrl",
+    "syncEnabled",
+    "syncKey",
+    "syncServerUrl",
+    "lastSyncedAt",
   ];
 
   storage.get(keys).then((local) => {

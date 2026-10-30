@@ -30,6 +30,10 @@ test("getRevisitedSchema() returns defaults for any invalid attribute", () => {
     challengePhrase: DEFAULTS.challengePhrase,
     challengeRepeatCount: DEFAULTS.challengeRepeatCount,
     whisperServerUrl: DEFAULTS.whisperServerUrl,
+    syncEnabled: DEFAULTS.syncEnabled,
+    syncKey: DEFAULTS.syncKey,
+    syncServerUrl: DEFAULTS.syncServerUrl,
+    lastSyncedAt: DEFAULTS.lastSyncedAt,
   } as Partial<Schema>);
 
   expect(getRevisitedSchema({

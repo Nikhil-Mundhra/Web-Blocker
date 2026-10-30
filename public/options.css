@@ -19,6 +19,10 @@ body:not(.schedule-enabled) #schedule-details {
   display: none;
 }
 
+body:not(.sync-enabled) #sync-details {
+  display: none;
+}
+
 body.locked .options select,
 body.locked .options input,
 body.locked #blocked-list,
@@ -209,10 +213,17 @@ body.locked #lock-btn {
   margin-left: 8px;
 }
 
-.whisper-server-row {
+.whisper-server-row,
+.sync-key-row,
+.sync-server-row {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.font-mono {
+  font-family: monospace;
 }
 
 .whisper-info-card {
@@ -601,10 +612,17 @@ fieldset {
   margin-left: 8px;
 }
 
-.whisper-server-row {
+.whisper-server-row,
+.sync-key-row,
+.sync-server-row {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.font-mono {
+  font-family: monospace;
 }
 
 .whisper-info-card {
