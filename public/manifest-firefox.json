@@ -31,7 +31,12 @@
   "incognito": "spanning",
   "browser_specific_settings": {
     "gecko": {
-      "id": "{7C4E2B91-3A6D-4F08-9B5E-2D8A1C6F3E74}"
+      "id": "{7C4E2B91-3A6D-4F08-9B5E-2D8A1C6F3E74}",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
     }
   }
 }

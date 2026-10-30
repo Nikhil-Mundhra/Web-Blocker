@@ -259,15 +259,22 @@ const UI = (() => {
   // 12. Fine Time Limits per Website
   const renderTimeLimitsTable = () => {
     const domains = Object.keys(currentTimeLimits);
+    elements.timeLimitsTbody.textContent = "";
+
     if (domains.length === 0) {
-      elements.timeLimitsTbody.innerHTML = '<tr class="empty-row"><td colspan="4">No site limits configured yet.</td></tr>';
+      const emptyTr = document.createElement("tr");
+      emptyTr.className = "empty-row";
+      const emptyTd = document.createElement("td");
+      emptyTd.colSpan = 4;
+      emptyTd.textContent = "No site limits configured yet.";
+      emptyTr.appendChild(emptyTd);
+      elements.timeLimitsTbody.appendChild(emptyTr);
       return;
     }
 
     const todayKey = getTodayKey();
     const todayUsage = currentDailyUsage[todayKey] || {};
 
-    elements.timeLimitsTbody.innerHTML = "";
     domains.forEach((domain) => {
       const limitMinutes = currentTimeLimits[domain];
       const usedSeconds = todayUsage[domain] || 0;
@@ -279,17 +286,50 @@ const UI = (() => {
       else if (percent >= 80) fillClass += " warning";
 
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><strong>${domain}</strong></td>
-        <td>${limitMinutes} min / day</td>
-        <td>
-          <div class="usage-progress-bar">
-            <div class="progress-track"><div class="${fillClass}" style="width: ${percent}%;"></div></div>
-            <span>${usedMinutes}m / ${limitMinutes}m (${percent}%)</span>
-          </div>
-        </td>
-        <td><button type="button" class="btn btn-danger btn-small delete-limit-btn" data-domain="${domain}">Delete</button></td>
-      `;
+
+      // Col 1: Domain
+      const tdDomain = document.createElement("td");
+      const strong = document.createElement("strong");
+      strong.textContent = domain;
+      tdDomain.appendChild(strong);
+      tr.appendChild(tdDomain);
+
+      // Col 2: Limit
+      const tdLimit = document.createElement("td");
+      tdLimit.textContent = `${limitMinutes} min / day`;
+      tr.appendChild(tdLimit);
+
+      // Col 3: Usage progress bar
+      const tdUsage = document.createElement("td");
+      const progressBar = document.createElement("div");
+      progressBar.className = "usage-progress-bar";
+
+      const track = document.createElement("div");
+      track.className = "progress-track";
+
+      const fill = document.createElement("div");
+      fill.className = fillClass;
+      fill.style.width = `${percent}%`;
+      track.appendChild(fill);
+
+      const span = document.createElement("span");
+      span.textContent = `${usedMinutes}m / ${limitMinutes}m (${percent}%)`;
+
+      progressBar.appendChild(track);
+      progressBar.appendChild(span);
+      tdUsage.appendChild(progressBar);
+      tr.appendChild(tdUsage);
+
+      // Col 4: Delete button
+      const tdAction = document.createElement("td");
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "btn btn-danger btn-small delete-limit-btn";
+      deleteBtn.dataset.domain = domain;
+      deleteBtn.textContent = "Delete";
+      tdAction.appendChild(deleteBtn);
+      tr.appendChild(tdAction);
+
       elements.timeLimitsTbody.appendChild(tr);
     });
 

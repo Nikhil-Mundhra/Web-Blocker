@@ -1,5 +1,4 @@
 import storage, { VALIDATORS, CounterPeriod } from "./storage";
-import getBlockedMessage from "./helpers/get-blocked-message";
 import { normalizeHost } from "./helpers/time-limits";
 import { verifySpokenPhrase } from "./helpers/verify-phrase";
 
@@ -42,15 +41,36 @@ window.addEventListener("DOMContentLoaded", async () => {
     ? { count, period: period as CounterPeriod }
     : undefined;
 
-  const message = getBlockedMessage({
-    url,
-    rule,
-    countParams,
-  });
-
   const messageEl = document.getElementById("message") as HTMLParagraphElement | null;
   if (messageEl) {
-    messageEl.innerHTML = message;
+    messageEl.textContent = "";
+
+    const urlSpan = document.createElement("span");
+    urlSpan.id = "url";
+    urlSpan.textContent = url;
+
+    const boldEl = document.createElement("b");
+    boldEl.textContent = " was blocked";
+
+    const ruleSpan = document.createElement("span");
+    ruleSpan.id = "rule";
+    ruleSpan.textContent = rule;
+
+    messageEl.appendChild(urlSpan);
+    messageEl.appendChild(boldEl);
+    messageEl.appendChild(document.createTextNode(" by "));
+    messageEl.appendChild(ruleSpan);
+
+    if (countParams) {
+      const periodStrings: Record<CounterPeriod, string> = {
+        ALL_TIME: "overall",
+        THIS_MONTH: "this month",
+        THIS_WEEK: "this week",
+        TODAY: "today",
+      };
+      const countText = ` (${countParams.count}x ${periodStrings[countParams.period]})`;
+      messageEl.appendChild(document.createTextNode(countText));
+    }
   }
 
   // 1. One-minute snooze button
