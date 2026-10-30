@@ -163,4 +163,24 @@ describe("Popup Integration Test", () => {
     expect(blockPageBtn.disabled).toBe(true);
     expect(blockSiteBtn.disabled).toBe(true);
   });
+
+  it("displays time limit countdown and marks body ready when daily time limit is active", async () => {
+    storageState.timeLimits = { "example.com": 20 };
+    storageState.dailyUsage = {};
+
+    jest.isolateModules(() => {
+      require("../popup");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(document.body.classList.contains("ready")).toBe(true);
+
+    const timeLimitCard = document.getElementById("time-limit-card") as HTMLDivElement;
+    const timeLimitRemaining = document.getElementById("time-limit-remaining") as HTMLSpanElement;
+
+    expect(timeLimitCard.classList.contains("hidden")).toBe(false);
+    expect(timeLimitRemaining.textContent).toContain("20m 0s left");
+  });
 });

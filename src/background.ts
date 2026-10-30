@@ -2,7 +2,13 @@ import initStorage from "./storage/init";
 import storage from "./storage";
 import recreateContextMenu from "./helpers/recreate-context-menu";
 import scrollTax from "./helpers/scroll-tax";
-import { normalizeHost, hasExceededTimeLimit, recordTimeUsage } from "./helpers/time-limits";
+import {
+  normalizeHost,
+  hasExceededTimeLimit,
+  recordTimeUsage,
+  getTimeRemaining,
+  isSiteExtensionActive,
+} from "./helpers/time-limits";
 
 let __enabled: boolean;
 let __contextMenu: boolean;
@@ -62,6 +68,10 @@ initStorage().then(() => {
     if (changes["siteExtensions"]) {
       __siteExtensions = (changes["siteExtensions"].newValue as Record<string, number>) || {};
     }
+
+    if (changes["timeLimits"] || changes["dailyUsage"] || changes["siteExtensions"]) {
+      updateBadgeForTab(__activeTabId, __activeUrl);
+    }
   });
 });
 
@@ -88,6 +98,48 @@ chrome.action.onClicked.addListener(() => {
   chrome.runtime.openOptionsPage();
 });
 
+// Update toolbar icon badge with remaining time for the tab
+const updateBadgeForTab = (tabId?: number | null, url?: string | null) => {
+  if (!tabId || !url || !url.startsWith("http")) {
+    if (tabId) {
+      chrome.action.setBadgeText({ text: "", tabId });
+    }
+    return;
+  }
+
+  const host = normalizeHost(url);
+  const limitMinutes = __timeLimits[host];
+
+  if (!limitMinutes || limitMinutes <= 0) {
+    chrome.action.setBadgeText({ text: "", tabId });
+    return;
+  }
+
+  if (isSiteExtensionActive(host, __siteExtensions)) {
+    chrome.action.setBadgeText({ text: "EXT", tabId });
+    chrome.action.setBadgeBackgroundColor({ color: "#10b981", tabId });
+    return;
+  }
+
+  const { remainingSeconds } = getTimeRemaining(host, __timeLimits, __dailyUsage);
+
+  if (remainingSeconds <= 0) {
+    chrome.action.setBadgeText({ text: "0m", tabId });
+    chrome.action.setBadgeBackgroundColor({ color: "#ef4444", tabId });
+  } else if (remainingSeconds < 60) {
+    chrome.action.setBadgeText({ text: `${remainingSeconds}s`, tabId });
+    chrome.action.setBadgeBackgroundColor({ color: "#ef4444", tabId });
+  } else {
+    const mins = Math.ceil(remainingSeconds / 60);
+    chrome.action.setBadgeText({ text: `${mins}m`, tabId });
+    if (mins <= 5) {
+      chrome.action.setBadgeBackgroundColor({ color: "#f59e0b", tabId });
+    } else {
+      chrome.action.setBadgeBackgroundColor({ color: "#3b82f6", tabId });
+    }
+  }
+};
+
 // Track active window focus
 if (chrome.windows && chrome.windows.onFocusChanged) {
   chrome.windows.onFocusChanged.addListener((windowId) => {
@@ -101,7 +153,17 @@ if (chrome.tabs && chrome.tabs.onActivated) {
     __activeTabId = activeInfo.tabId;
     chrome.tabs.get(activeInfo.tabId, (tab) => {
       __activeUrl = tab?.url || null;
+      updateBadgeForTab(__activeTabId, __activeUrl);
     });
+  });
+}
+
+if (chrome.tabs && chrome.tabs.onUpdated) {
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (tabId === __activeTabId && (changeInfo.url || changeInfo.status === "complete")) {
+      __activeUrl = tab.url || __activeUrl;
+      updateBadgeForTab(__activeTabId, __activeUrl);
+    }
   });
 }
 
@@ -119,6 +181,7 @@ setInterval(() => {
   // Increment usage by 5 seconds
   __dailyUsage = recordTimeUsage(host, 5, __dailyUsage);
   storage.set({ dailyUsage: __dailyUsage });
+  updateBadgeForTab(__activeTabId, __activeUrl);
 
   if (hasExceededTimeLimit(host, __timeLimits, __dailyUsage, __siteExtensions)) {
     scrollTax({

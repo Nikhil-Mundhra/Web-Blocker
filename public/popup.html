@@ -21,6 +21,18 @@
       <div class="site-label">Current Tab</div>
       <div id="current-url" class="current-url">Loading...</div>
 
+      <!-- Live Daily Time Limit Card for Current Site -->
+      <div id="time-limit-card" class="time-limit-card hidden">
+        <div class="time-limit-row">
+          <span class="timer-title">⏱️ Remaining Today</span>
+          <span id="time-limit-remaining" class="timer-badge">--:--</span>
+        </div>
+        <div class="time-progress-track">
+          <div id="time-progress-fill" class="time-progress-fill" style="width: 0%;"></div>
+        </div>
+        <div id="time-limit-caption" class="time-limit-caption">-- min used of -- min</div>
+      </div>
+
       <div class="block-actions">
         <button id="block-page-btn" type="button" class="btn btn-secondary">Block this page</button>
         <button id="block-site-btn" type="button" class="btn btn-primary">Block entire site</button>
