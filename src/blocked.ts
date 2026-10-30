@@ -25,15 +25,8 @@ interface IWindow extends Window {
 window.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
 
-  const url = params.get("url");
-  if (!url) {
-    return;
-  }
-
-  const rule = params.get("rule");
-  if (!rule) {
-    return;
-  }
+  const url = params.get("url") || "https://reddit.com/r/all";
+  const rule = params.get("rule") || "reddit.com";
 
   const count = parseInt(params.get("count") || "");
   const period = params.get("period");
@@ -108,12 +101,19 @@ window.addEventListener("DOMContentLoaded", async () => {
   let speechRecognitionInstance: ISpeechRecognition | null = null;
   let fallbackTranscript = "";
 
-  const config = await storage.get([
-    "challengePhrase",
-    "challengeRepeatCount",
-    "whisperServerUrl",
-    "siteExtensions",
-  ]);
+  const config = (typeof chrome !== "undefined" && chrome?.storage?.local)
+    ? await storage.get([
+      "challengePhrase",
+      "challengeRepeatCount",
+      "whisperServerUrl",
+      "siteExtensions",
+    ])
+    : {
+      challengePhrase: "I am wasting my time and I need to get back to work",
+      challengeRepeatCount: 3,
+      whisperServerUrl: "http://127.0.0.1:8765",
+      siteExtensions: {},
+    };
 
   const targetPhrase = config.challengePhrase || "I am wasting my time and I need to get back to work";
   const requiredCount = config.challengeRepeatCount || 3;

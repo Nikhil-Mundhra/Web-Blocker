@@ -1,5 +1,5 @@
 import storage, {
-  Schema, Resolution, Mode, CounterPeriod, RESOLUTIONS, Schedule, BLOCKED_EXAMPLE,
+  Schema, Resolution, Mode, CounterPeriod, RESOLUTIONS, Schedule, BLOCKED_EXAMPLE, DEFAULTS,
 } from "./storage";
 import { normalizeHost, getTodayKey } from "./helpers/time-limits";
 
@@ -497,6 +497,16 @@ const UI = (() => {
 })();
 
 window.addEventListener("DOMContentLoaded", () => {
+  if (typeof chrome === "undefined" || !chrome?.storage?.local) {
+    UI.init({
+      ...DEFAULTS,
+      timeLimits: { "reddit.com": 30, "youtube.com": 45 },
+      dailyUsage: { [getTodayKey()]: { "reddit.com": 12 * 60, "youtube.com": 36 * 60 } },
+    });
+    document.body.classList.add("ready");
+    return;
+  }
+
   const keys: (keyof Schema)[] = [
     "enabled",
     "mode",
