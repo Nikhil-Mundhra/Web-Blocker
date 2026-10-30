@@ -140,4 +140,40 @@ describe("scrollTax()", () => {
 
     expect(tabsRemoveMock).not.toHaveBeenCalled();
   });
+
+  it("bypasses blocklist when an active Mirror of Accountability extension exists for the domain", async () => {
+    storageGetMock.mockResolvedValueOnce({
+      ...DEFAULTS,
+      siteExtensions: { "youtube.com": Date.now() + 5 * 60 * 1000 },
+    } as never);
+
+    scrollTax({ blocked: ["youtube.com"], tabId: 70, url: "https://www.youtube.com/watch?v=123" });
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(tabsRemoveMock).not.toHaveBeenCalled();
+  });
+
+  it("defers domain-level block when domain also has remaining Daily Time Limit budget, but still blocks specific sub-path rules", async () => {
+    // 1. Domain-level rule in blocked + remaining time limit -> allowed until budget runs out
+    storageGetMock.mockResolvedValueOnce({
+      ...DEFAULTS,
+      timeLimits: { "youtube.com": 15 },
+      dailyUsage: {},
+    } as never);
+
+    scrollTax({ blocked: ["youtube.com/", "youtube.com/shorts*"], tabId: 80, url: "https://www.youtube.com/watch?v=abc" });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(tabsRemoveMock).not.toHaveBeenCalled();
+
+    // 2. Specific sub-path rule (youtube.com/shorts*) -> still blocked immediately
+    storageGetMock.mockResolvedValueOnce({
+      ...DEFAULTS,
+      timeLimits: { "youtube.com": 15 },
+      dailyUsage: {},
+    } as never);
+
+    scrollTax({ blocked: ["youtube.com/", "youtube.com/shorts*"], tabId: 81, url: "https://www.youtube.com/shorts/xyz" });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(tabsRemoveMock).toHaveBeenCalledWith(81);
+  });
 });

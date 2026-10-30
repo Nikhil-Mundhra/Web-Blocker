@@ -4,6 +4,11 @@ import * as counterHelper from "./counter";
 import getBlockedUrl from "./get-blocked-url";
 import { isScheduleActive } from "./schedule";
 import { isPaused } from "./pause";
+import {
+  normalizeHost,
+  isSiteExtensionActive,
+  hasExceededTimeLimit,
+} from "./time-limits";
 
 interface ScrollTaxOptions {
   blocked: string[]
@@ -12,6 +17,16 @@ interface ScrollTaxOptions {
   title?: string
   reason?: string
 }
+
+const isDomainLevelRuleForHost = (rulePath: string, host: string): boolean => {
+  const cleaned = rulePath
+    .toLowerCase()
+    .trim()
+    .replace(/^\*\./, "")
+    .replace(/^www\./, "")
+    .replace(/\/\*?$/, "");
+  return cleaned === host;
+};
 
 // Track recent block timestamps per tab to prevent rapid duplicate actions during multi-hop redirects
 const recentBlockedTabs = new Map<number, number>();
@@ -37,6 +52,9 @@ export default (options: ScrollTaxOptions) => {
     "mode",
     "schedule",
     "pausedUntil",
+    "timeLimits",
+    "dailyUsage",
+    "siteExtensions",
   ]).then(({
     counter,
     counterShow,
@@ -46,6 +64,9 @@ export default (options: ScrollTaxOptions) => {
     mode,
     schedule,
     pausedUntil,
+    timeLimits = {},
+    dailyUsage = {},
+    siteExtensions = {},
   }) => {
     // 1. If currently paused (e.g. 1-minute break), allow navigation
     if (isPaused(pausedUntil, now)) {
@@ -57,17 +78,28 @@ export default (options: ScrollTaxOptions) => {
       return;
     }
 
+    const host = normalizeHost(url);
+
+    // 3. If user earned an active Mirror of Accountability extension for this domain, allow navigation
+    if (host && isSiteExtensionActive(host, siteExtensions, now)) {
+      return;
+    }
+
+    const hasTimeLimit = Boolean(host && typeof timeLimits[host] === "number" && timeLimits[host] > 0);
+    const limitExceeded = hasTimeLimit && hasExceededTimeLimit(host, timeLimits, dailyUsage, siteExtensions, now);
+
     const foundRule = findRule(url, blocked, title);
 
-    // 3. Determine if site should be blocked based on mode
+    // 4. Determine if site should be blocked based on time limits + block/allow mode
     let shouldBlock = false;
     let effectiveRulePath = reason || foundRule?.path || "[Approved Sites Only]";
 
-    if (reason) {
+    if (reason || limitExceeded) {
       shouldBlock = true;
+      effectiveRulePath = reason || `Daily Limit Exceeded (${timeLimits[host]} min)`;
     } else if (mode === "WHITELIST") {
-      // In Whitelist mode, only explicitly allowed rules are permitted
-      if (foundRule && foundRule.type === "allow") {
+      // In Whitelist mode, explicitly allowed rules OR domains with active remaining Daily Time Limits are permitted
+      if ((foundRule && foundRule.type === "allow") || (hasTimeLimit && !limitExceeded)) {
         shouldBlock = false;
       } else {
         shouldBlock = true;
@@ -78,6 +110,10 @@ export default (options: ScrollTaxOptions) => {
     } else {
       // Standard BLOCKLIST mode
       if (!foundRule || foundRule.type === "allow") {
+        shouldBlock = false;
+      } else if (hasTimeLimit && !limitExceeded && isDomainLevelRuleForHost(foundRule.path, host)) {
+        // Domain has remaining Daily Time Limit budget: defer domain-wide block until budget is used,
+        // while still allowing sub-path/title rules (e.g. youtube.com/shorts*) to block immediately.
         shouldBlock = false;
       } else {
         shouldBlock = true;

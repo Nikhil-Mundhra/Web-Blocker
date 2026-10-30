@@ -2,7 +2,13 @@ import storage from "./storage";
 import removeProtocol from "./helpers/remove-protocol";
 import { isPaused, getRemainingPauseSeconds } from "./helpers/pause";
 import scrollTax from "./helpers/scroll-tax";
-import { normalizeHost, getTimeRemaining, isSiteExtensionActive } from "./helpers/time-limits";
+import {
+  normalizeHost,
+  getTimeRemaining,
+  isSiteExtensionActive,
+  recordTimeUsage,
+  hasExceededTimeLimit,
+} from "./helpers/time-limits";
 
 window.addEventListener("DOMContentLoaded", async () => {
   const currentUrlEl = document.getElementById("current-url") as HTMLDivElement;
@@ -23,10 +29,22 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   document.body.classList.add("ready");
 
+  // Keep background service worker awake and inform it that the popup is open
+  let popupPort: chrome.runtime.Port | null = null;
+  try {
+    if (chrome.runtime && chrome.runtime.connect) {
+      popupPort = chrome.runtime.connect({ name: "popup" });
+    }
+  } catch {
+    // Ignore if runtime.connect is not available in test environment
+  }
+
   let tabUrl = "";
   let tabId: number | undefined;
   let isHttp = false;
   let parsedHost = "";
+  let lastSeenUsedSeconds = -1;
+  let lastUsageTickAt = Date.now();
 
   try {
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -82,6 +100,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       statusBadge.textContent = "Active";
       statusBadge.className = "badge";
       pauseStatus.classList.add("hidden");
+      pauseActions.classList.add("hidden");
       pauseActions.classList.remove("hidden");
     }
 
@@ -91,7 +110,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (limitMinutes && limitMinutes > 0 && timeLimitCard) {
       timeLimitCard.classList.remove("hidden");
       const { usedSeconds, remainingSeconds } = getTimeRemaining(norm, timeLimits, dailyUsage);
+      if (lastSeenUsedSeconds !== -1 && usedSeconds !== lastSeenUsedSeconds) {
+        lastUsageTickAt = Date.now();
+      }
+      lastSeenUsedSeconds = usedSeconds;
+
       const usedMinutes = Math.floor(usedSeconds / 60);
+      const usedRemSeconds = usedSeconds % 60;
       const percent = Math.min(100, Math.round((usedSeconds / (limitMinutes * 60)) * 100));
       const isExtended = isSiteExtensionActive(norm, siteExtensions);
 
@@ -123,26 +148,107 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
 
       if (timeLimitCaption) {
-        timeLimitCaption.textContent = `${usedMinutes}m used of ${limitMinutes}m allowance`;
+        const usedText = usedRemSeconds > 0 ? `${usedMinutes}m ${usedRemSeconds}s` : `${usedMinutes}m`;
+        timeLimitCaption.textContent = `${usedText} used of ${limitMinutes}m allowance`;
       }
     } else if (timeLimitCard) {
       timeLimitCard.classList.add("hidden");
     }
   };
 
-  try {
-    await updateState();
-  } catch (err) {
-    console.warn("Error running updateState in popup:", err);
+  if (chrome.storage?.local?.onChanged) {
+    chrome.storage.local.onChanged.addListener(() => {
+      updateState().catch((err) => console.warn("Error in popup storage listener:", err));
+    });
   }
+
+  // Every 5 seconds while popup is open, ensure time usage ticks by 5s and UI updates
+  const usageInterval = setInterval(async () => {
+    if (!isHttp || !parsedHost) return;
+
+    const norm = normalizeHost(parsedHost);
+    const {
+      enabled,
+      pausedUntil,
+      timeLimits = {},
+      dailyUsage = {},
+      siteExtensions = {},
+    } = await storage.get([
+      "enabled",
+      "pausedUntil",
+      "timeLimits",
+      "dailyUsage",
+      "siteExtensions",
+    ]);
+
+    if (!enabled || isPaused(pausedUntil) || !timeLimits[norm]) {
+      return;
+    }
+
+    const beforeUsed = getTimeRemaining(norm, timeLimits, dailyUsage).usedSeconds;
+
+    if (Date.now() - lastUsageTickAt >= 4500) {
+      let handledByBackground = false;
+      if (chrome.runtime && chrome.runtime.sendMessage) {
+        try {
+          await new Promise<void>((resolve) => {
+            chrome.runtime.sendMessage({ type: "TICK_TIME_USAGE", tabId, url: tabUrl }, () => {
+              // Ignore chrome.runtime.lastError if any
+              void chrome.runtime?.lastError;
+              resolve();
+            });
+          });
+          const latest = await storage.get(["dailyUsage"]);
+          const afterUsed = getTimeRemaining(norm, timeLimits, latest.dailyUsage || {}).usedSeconds;
+          if (afterUsed > beforeUsed) {
+            handledByBackground = true;
+            lastUsageTickAt = Date.now();
+          }
+        } catch {
+          // Fallback to local increment below
+        }
+      }
+
+      if (!handledByBackground && Date.now() - lastUsageTickAt >= 4500) {
+        const updatedUsage = recordTimeUsage(norm, 5, dailyUsage);
+        lastUsageTickAt = Date.now();
+        await storage.set({ dailyUsage: updatedUsage });
+
+        if (tabId && hasExceededTimeLimit(norm, timeLimits, updatedUsage, siteExtensions)) {
+          scrollTax({
+            blocked: [norm],
+            tabId,
+            url: tabUrl,
+            reason: `Daily Limit Exceeded (${timeLimits[norm]} min)`,
+          });
+        }
+      }
+    }
+
+    await updateState();
+  }, 5000);
 
   const timer = setInterval(() => {
     updateState().catch((err) => console.warn("Error in popup timer:", err));
   }, 1000);
 
   window.addEventListener("unload", () => {
+    clearInterval(usageInterval);
     clearInterval(timer);
+    if (popupPort) {
+      try {
+        popupPort.disconnect();
+      } catch {
+        // Ignore
+      }
+    }
   });
+
+  try {
+    await updateState();
+  } catch (err) {
+    console.warn("Error running updateState in popup:", err);
+  }
 
   blockPageBtn.addEventListener("click", async () => {
     if (!isHttp || !tabId) return;

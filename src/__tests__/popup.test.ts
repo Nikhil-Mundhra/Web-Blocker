@@ -183,4 +183,37 @@ describe("Popup Integration Test", () => {
     expect(timeLimitCard.classList.contains("hidden")).toBe(false);
     expect(timeLimitRemaining.textContent).toContain("20m 0s left");
   });
+
+  it("updates the time remaining counter every 5 seconds while popup is open", async () => {
+    jest.useFakeTimers();
+    storageState.timeLimits = { "example.com": 20 };
+    storageState.dailyUsage = {};
+
+    jest.isolateModules(() => {
+      require("../popup");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const timeLimitRemaining = document.getElementById("time-limit-remaining") as HTMLSpanElement;
+    const timeLimitCaption = document.getElementById("time-limit-caption") as HTMLDivElement;
+
+    expect(timeLimitRemaining.textContent).toBe("20m 0s left");
+    expect(timeLimitCaption.textContent).toBe("0m used of 20m allowance");
+
+    // Advance 5 seconds
+    jest.advanceTimersByTime(5000);
+    for (let i = 0; i < 6; i += 1) {
+      // Flush microtasks
+      // eslint-disable-next-line no-await-in-loop
+      await Promise.resolve();
+    }
+
+    expect(timeLimitRemaining.textContent).toBe("19m 55s left");
+    expect(timeLimitCaption.textContent).toBe("0m 5s used of 20m allowance");
+
+    jest.useRealTimers();
+  });
 });
