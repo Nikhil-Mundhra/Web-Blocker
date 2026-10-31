@@ -62,6 +62,7 @@ const UI = (() => {
     limitDomain: document.getElementById("limit-domain") as HTMLInputElement,
     limitMinutes: document.getElementById("limit-minutes") as HTMLInputElement,
     setLimitBtn: document.getElementById("set-limit-btn") as HTMLButtonElement,
+    updateLimitBtn: document.getElementById("update-limit-btn") as HTMLButtonElement,
     timeLimitsTbody: document.getElementById("time-limits-tbody") as HTMLTableSectionElement,
 
     // Mirror / Speech Challenge Settings
@@ -375,17 +376,53 @@ const UI = (() => {
       tdUsage.appendChild(progressBar);
       tr.appendChild(tdUsage);
 
-      // Col 4: Delete button
+      // Col 4: Action buttons (Update & Delete)
       const tdAction = document.createElement("td");
+      tdAction.className = "time-limit-actions";
+
+      const updateBtn = document.createElement("button");
+      updateBtn.type = "button";
+      updateBtn.className = "btn btn-secondary btn-small update-limit-btn";
+      updateBtn.dataset.domain = domain;
+      updateBtn.textContent = "Update";
+
       const deleteBtn = document.createElement("button");
       deleteBtn.type = "button";
       deleteBtn.className = "btn btn-danger btn-small delete-limit-btn";
       deleteBtn.dataset.domain = domain;
       deleteBtn.textContent = "Delete";
+
+      tdAction.appendChild(updateBtn);
       tdAction.appendChild(deleteBtn);
       tr.appendChild(tdAction);
 
       elements.timeLimitsTbody.appendChild(tr);
+    });
+
+    // Attach update listeners
+    elements.timeLimitsTbody.querySelectorAll<HTMLButtonElement>(".update-limit-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const domain = btn.dataset.domain;
+        if (!domain || currentTimeLimits[domain] === undefined) return;
+
+        const inputDomain = elements.limitDomain.value.trim();
+        const inputMinutes = Number(elements.limitMinutes.value);
+
+        const normInput = inputDomain ? normalizeHost(inputDomain) : "";
+        if ((normInput === domain || !normInput) && !isNaN(inputMinutes) && inputMinutes > 0 && inputMinutes !== currentTimeLimits[domain]) {
+          const updated = { ...currentTimeLimits, [domain]: inputMinutes };
+          storage.set({ timeLimits: updated }).then(() => {
+            elements.limitDomain.value = "";
+            elements.limitMinutes.value = "";
+          });
+          return;
+        }
+
+        elements.limitDomain.value = domain;
+        elements.limitMinutes.value = String(currentTimeLimits[domain]);
+        elements.limitMinutes.focus();
+        elements.limitMinutes.select();
+      });
     });
 
     // Attach delete listeners (requires passing the Mirror of Accountability)
@@ -707,7 +744,7 @@ const UI = (() => {
     });
   }
 
-  elements.setLimitBtn.addEventListener("click", () => {
+  const saveOrUpdateLimit = () => {
     const rawDomain = elements.limitDomain.value.trim();
     const minutes = Number(elements.limitMinutes.value);
 
@@ -716,11 +753,25 @@ const UI = (() => {
     const limitMin = isNaN(minutes) || minutes < 1 ? 15 : minutes;
 
     const updated = { ...currentTimeLimits, [norm]: limitMin };
-    storage.set({ timeLimits: updated }).then(() => {
+    return storage.set({ timeLimits: updated }).then(() => {
       elements.limitDomain.value = "";
       elements.limitMinutes.value = "";
     });
-  });
+  };
+
+  elements.setLimitBtn.addEventListener("click", saveOrUpdateLimit);
+  if (elements.updateLimitBtn) {
+    elements.updateLimitBtn.addEventListener("click", saveOrUpdateLimit);
+  }
+
+  const handleLimitKeydown = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveOrUpdateLimit();
+    }
+  };
+  elements.limitDomain.addEventListener("keydown", handleLimitKeydown);
+  elements.limitMinutes.addEventListener("keydown", handleLimitKeydown);
 
   // 13. Mirror of Accountability & Whisper Server Settings
   elements.challengePhrase.addEventListener("input", (e) => {

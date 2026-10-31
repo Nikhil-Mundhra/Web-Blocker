@@ -293,6 +293,47 @@ describe("Options Page Integration Test", () => {
     expect(mirrorModal.classList.contains("hidden")).toBe(true);
   });
 
+  it("updates daily time limits using form update button and row update button", async () => {
+    storageState.timeLimits = { "youtube.com": 20 };
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const domainInput = document.getElementById("limit-domain") as HTMLInputElement;
+    const minutesInput = document.getElementById("limit-minutes") as HTMLInputElement;
+    const updateBtn = document.getElementById("update-limit-btn") as HTMLButtonElement;
+    const tbody = document.getElementById("time-limits-tbody") as HTMLTableSectionElement;
+
+    // Verify row rendered with Update button
+    expect(tbody.innerHTML).toContain("youtube.com");
+    expect(tbody.innerHTML).toContain("20 min / day");
+
+    const rowUpdateBtn = tbody.querySelector<HTMLButtonElement>(".update-limit-btn");
+    expect(rowUpdateBtn).not.toBeNull();
+    rowUpdateBtn?.click();
+
+    // Verify inputs populated
+    expect(domainInput.value).toBe("youtube.com");
+    expect(minutesInput.value).toBe("20");
+
+    // Update minutes using the form's update button
+    minutesInput.value = "45";
+    mockStorageSet.mockClear();
+    updateBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(mockStorageSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeLimits: { "youtube.com": 45 },
+      }),
+    );
+    expect(domainInput.value).toBe("");
+    expect(minutesInput.value).toBe("");
+  });
+
   it("configures Mirror of Accountability phrase and repeat count", async () => {
     jest.isolateModules(() => {
       require("../options");
