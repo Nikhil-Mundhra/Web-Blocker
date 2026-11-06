@@ -1059,6 +1059,9 @@ const UI = (() => {
       }
       if (isLocal) {
         elements.syncOfflineTip?.classList.remove("hidden");
+      } else {
+        elements.syncOfflineTip?.classList.add("hidden");
+        showTransferFeedback("Could not reach Cloudflare Worker. Please verify that your worker is deployed and your URL is correct.", true);
       }
       return false;
     }
@@ -1148,6 +1151,7 @@ const UI = (() => {
         elements.syncOfflineTip?.classList.remove("hidden");
         showTransferFeedback("Local server is offline. Click 'Connect Free Cloudflare Sync' above or run bash server/start.sh.", true);
       } else {
+        elements.syncOfflineTip?.classList.add("hidden");
         showTransferFeedback(`Sync failed: ${err}`, true);
       }
       return;
@@ -1192,6 +1196,7 @@ const UI = (() => {
           elements.syncOfflineTip?.classList.remove("hidden");
           showTransferFeedback("Local server is offline. Click 'Connect Free Cloudflare Sync' above or run bash server/start.sh.", true);
         } else {
+          elements.syncOfflineTip?.classList.add("hidden");
           showTransferFeedback(`Push failed: ${err}`, true);
         }
       }
