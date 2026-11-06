@@ -1,0 +1,8 @@
+name = "scrolltax-sync"
+main = "server/sync_worker.js"
+compatibility_date = "2024-01-01"
+
+# Automatically binds KV namespace when deployed via Cloudflare Workers
+[[kv_namespaces]]
+binding = "SCROLLTAX_KV"
+id = ""

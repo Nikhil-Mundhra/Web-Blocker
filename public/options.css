@@ -927,6 +927,50 @@ body.locked #lock-btn {
   line-height: 1.4;
 }
 
+/* Cloudflare 1-Click Sync Controls */
+.cloudflare-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-cloudflare {
+  background: #f38020;
+  color: #ffffff;
+  border: 1px solid rgba(243, 128, 32, 0.4);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(243, 128, 32, 0.25);
+  transition: all var(--transition-fast);
+}
+
+.btn-cloudflare:hover {
+  background: #e57314;
+  border-color: #d9690b;
+  box-shadow: 0 2px 8px rgba(243, 128, 32, 0.35);
+}
+
+.cloudflare-icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.btn-cloudflare-deploy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.offline-actions-row {
+  margin: 6px 0;
+}
+
 .tip-card.warning {
   background: var(--warning-subtle);
   border: 1px solid rgba(217, 119, 6, 0.25);
