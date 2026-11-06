@@ -143,13 +143,18 @@ title:*shorts*           # Blocks pages with "shorts" in the tab title
 
 ---
 
-## ☁️ Cross-Browser Zero-Knowledge Cloud Sync
+## ☁️ Cross-Browser Sync & Instant Transfer
 
-Keep your blocklists, daily time limits, schedules, and accountability phrases identical across **Opera GX**, **Vivaldi**, **Firefox**, and **Chrome** without creating accounts or logins.
+Keep your blocklists, daily time limits, schedules, and accountability phrases identical across **Vivaldi**, **Chrome**, **Firefox**, and **Opera** without creating accounts or logins.
 
-### How It Works:
+### Option 1: Instant Transfer & Backup (No Server Needed)
+- **📋 Copy to Clipboard**: Export all your settings with a single click and paste them into your other browser.
+- **💾 Export & Import**: Save a `.json` backup file or import existing settings in seconds from the Options UI. Zero terminal commands, zero setup.
+
+### Option 2: Continuous Encrypted Cloud Sync
 - **Zero-Knowledge Architecture**: All data is encrypted on your device using client-side **AES-GCM (256-bit)** via the Web Crypto API before transmission. The sync server only stores an encrypted ciphertext blob and never sees your sites or rules.
 - **Sync Key**: Your unique Sync Key (e.g. `st_...`) is your private master key. Simply paste the same key into ScrollTax Options in any browser to link them.
+- **In-Page Server Diagnostics**: Options page includes a **Test Server** button, real-time connectivity badge, and 1-click terminal command copy if the local server is offline.
 - **Free Cloudflare Worker or Local Server**:
   - **Local Network**: Automatically works with the bundled Python server (`http://127.0.0.1:8765/sync`).
   - **Global Cloud (100% Free)**: Deploy `server/sync_worker.js` as a free Cloudflare Worker with KV storage in under 1 minute. Paste your worker URL into ScrollTax Options.

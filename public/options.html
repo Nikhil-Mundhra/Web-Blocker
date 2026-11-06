@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
-  <title>ScrollTax</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>ScrollTax: Settings and Preferences</title>
   <link rel="stylesheet" href="common.css">
   <link rel="stylesheet" href="options.css">
   <link rel="icon" type="image/png" href="icon_32.png">
@@ -11,395 +13,673 @@
 </head>
 
 <body>
-  <h1>
-    <img src="icon_128.png">
-    <span>ScrollTax</span>
-  </h1>
-
-  <div id="whats-new-banner" class="banner hidden">
-    <div class="banner-content">
-      <strong>✨ What's New in ScrollTax:</strong>
-      <span>Schedule blocking, Approved Sites Only (whitelist) mode, custom redirect URL, break/snooze button, settings lock, disable cooldown, and regex/literal wildcard syntax!</span>
-    </div>
-    <button id="dismiss-whats-new" type="button" class="btn btn-small">Dismiss</button>
-  </div>
-
-  <div id="locked-banner" class="banner locked-banner hidden">
-    <span>🔒 Settings are locked until <strong id="locked-time">--:--</strong> to keep you focused.</span>
-  </div>
-
-  <div class="options">
-    <div id="enabled-option" class="option">
-      <label>Enabled?</label>
-      <select id="enabled">
-        <option value="YES">Yes</option>
-        <option value="NO">No</option>
-      </select>
-    </div>
-
-    <div id="mode-option" class="option">
-      <label>Browsing mode?</label>
-      <select id="mode">
-        <option value="BLOCKLIST">Blocklist (Block listed sites)</option>
-        <option value="WHITELIST">Approved Sites Only (Block all except allowed)</option>
-      </select>
-    </div>
-
-    <div id="context-menu-option" class="option">
-      <label>Context menu?</label>
-      <select id="context-menu">
-        <option value="YES">Yes</option>
-        <option value="NO">No</option>
-      </select>
-    </div>
-  </div>
-
-  <div id="blocked-container">
-    <div class="blocked-header">
-      <span>Sites to block / allow</span>
-      <button id="syntax-help-btn" type="button" class="help-btn" title="Syntax Guide (?)">?</button>
-    </div>
-    <textarea id="blocked-list" rows="10" cols="50" spellcheck="false"></textarea>
-  </div>
-
-  <div class="options">
-    <div id="resolution-option" class="option baseline">
-      <label>How to resolve blocked?</label>
-      <div>
-        <select id="resolution">
-          <option value="CLOSE_TAB">Close Tab</option>
-          <option value="SHOW_BLOCKED_INFO_PAGE">Show Blocked info page</option>
-          <option value="REDIRECT">Redirect to URL</option>
-        </select>
-
-        <fieldset id="redirect-details" class="sub-fieldset">
-          <div class="option">
-            <label>Redirect to URL:</label>
-            <input type="text" id="redirect-url" placeholder="https://www.google.com" class="text-input" />
+  <div class="app-layout">
+    <!-- Top Brand Header -->
+    <header class="app-header">
+      <div class="brand">
+        <img src="icon_128.png" alt="ScrollTax Logo" class="brand-logo" width="38" height="38">
+        <div class="brand-info">
+          <div class="brand-title-row">
+            <h1 class="brand-title">ScrollTax</h1>
+            <span class="version-badge">v0.2.0</span>
           </div>
-        </fieldset>
-
-        <fieldset id="blocked-info-page-details" class="sub-fieldset">
-          <div class="option">
-            <label>Show blocked count?</label>
-            <select id="counter-show">
-              <option value="YES">Yes</option>
-              <option value="NO">No</option>
-            </select>
-          </div>
-
-          <div id="counter-period-option" class="option">
-            <label>Blocked count period?</label>
-            <select id="counter-period">
-              <option value="ALL_TIME">All Time</option>
-              <option value="THIS_MONTH">This Month</option>
-              <option value="THIS_WEEK">This Week</option>
-              <option value="TODAY">Today</option>
-            </select>
-          </div>
-        </fieldset>
-      </div>
-    </div>
-  </div>
-
-  <div class="section-divider"></div>
-
-  <h3>Daily Time Limits per Website</h3>
-  <div class="options">
-    <p class="section-desc">Set specific time allowances per website per day. Once the limit is exceeded, access will be blocked until tomorrow or until an extension is earned.</p>
-    
-    <div class="time-limit-form">
-      <input type="text" id="limit-domain" placeholder="e.g. youtube.com or reddit.com" class="text-input" />
-      <div class="minutes-input-group">
-        <input type="number" id="limit-minutes" min="1" max="1440" placeholder="15" class="number-input" />
-        <span>minutes / day</span>
-      </div>
-      <button id="set-limit-btn" type="button" class="btn btn-primary">Set Limit</button>
-      <button id="update-limit-btn" type="button" class="btn btn-secondary">Update</button>
-    </div>
-
-    <div id="time-limits-container" class="time-limits-container">
-      <table class="time-limits-table">
-        <thead>
-          <tr>
-            <th>Website</th>
-            <th>Daily Limit</th>
-            <th>Today's Usage</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="time-limits-tbody">
-          <tr class="empty-row"><td colspan="4">No site limits configured yet.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="section-divider"></div>
-
-  <h3>🪞 The Mirror of Accountability (Speech-to-Text Challenge)</h3>
-  <div class="options">
-    <p class="section-desc">When a site is blocked, requesting an extension requires confronting yourself in a live video mirror and repeating a self-accountability phrase verified by local OpenAI Whisper / MLX.</p>
-    
-    <div class="option baseline">
-      <label>Custom Phrase:</label>
-      <input type="text" id="challenge-phrase" class="text-input full-width" placeholder="I am wasting my time and I need to get back to work" />
-    </div>
-
-    <div class="option">
-      <label>Repetition Count:</label>
-      <input type="number" id="challenge-repeat-count" min="1" max="10" value="3" class="number-input" />
-      <span class="input-hint">times to repeat the phrase</span>
-    </div>
-
-    <div class="option baseline">
-      <label>Local Whisper Server:</label>
-      <div class="whisper-server-row">
-        <input type="text" id="whisper-server-url" class="text-input" value="http://127.0.0.1:8765" />
-        <button id="test-whisper-btn" type="button" class="btn btn-secondary">Test Connection</button>
-        <span id="whisper-status-badge" class="badge">Checking...</span>
-      </div>
-    </div>
-    <div class="whisper-info-card">
-      <strong>Apple Silicon MLX Whisper Integration:</strong> Runs 100% locally on Apple Silicon Neural Engine & GPU with zero cloud latency. If the local server is offline, browser Web Speech API will be used as automatic fallback.
-    </div>
-  </div>
-
-  <div class="section-divider"></div>
-
-  <h3>Block Schedule</h3>
-  <div class="options">
-    <div class="option">
-      <label>Scheduled blocking?</label>
-      <select id="schedule-enabled">
-        <option value="NO">No (Always Active)</option>
-        <option value="YES">Yes (Only during schedule)</option>
-      </select>
-    </div>
-
-    <fieldset id="schedule-details" class="standalone-fieldset">
-      <div class="option">
-        <label>Active Days:</label>
-        <div id="schedule-days" class="days-container">
-          <label class="day-checkbox"><input type="checkbox" value="1"> Mon</label>
-          <label class="day-checkbox"><input type="checkbox" value="2"> Tue</label>
-          <label class="day-checkbox"><input type="checkbox" value="3"> Wed</label>
-          <label class="day-checkbox"><input type="checkbox" value="4"> Thu</label>
-          <label class="day-checkbox"><input type="checkbox" value="5"> Fri</label>
-          <label class="day-checkbox"><input type="checkbox" value="6"> Sat</label>
-          <label class="day-checkbox"><input type="checkbox" value="0"> Sun</label>
+          <p class="brand-tagline">Enforce focus budgets and eliminate mindless doomscrolling</p>
         </div>
       </div>
-      <div class="option">
-        <label>Time Range:</label>
-        <div class="time-range-inputs">
-          <input type="time" id="schedule-start" value="09:00" class="time-input" />
-          <span>to</span>
-          <input type="time" id="schedule-end" value="17:00" class="time-input" />
-        </div>
+      <div class="header-actions">
+        <button id="syntax-help-btn" type="button" class="btn btn-secondary help-nav-btn" title="Syntax Guide">
+          <svg class="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <span>Syntax Guide</span>
+        </button>
+        <a target="_blank" href="https://github.com/Nikhil-Mundhra/Web-Blocker" class="btn btn-ghost github-link" title="GitHub Repository">
+          <svg class="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+          <span id="star">GitHub</span>
+        </a>
       </div>
-    </fieldset>
-  </div>
+    </header>
 
-  <div class="section-divider"></div>
-
-  <h3>☁️ Cross-Browser Cloud Sync</h3>
-  <div class="options">
-    <div class="option">
-      <label>Sync across browsers?</label>
-      <select id="sync-enabled">
-        <option value="NO">No (Local Only)</option>
-        <option value="YES">Yes (Encrypted Sync)</option>
-      </select>
+    <!-- Notification Banners -->
+    <div id="whats-new-banner" class="banner whats-new-banner hidden">
+      <div class="banner-content">
+        <span class="banner-badge">[UPDATE]</span>
+        <span class="banner-text">Schedule blocking, Approved Sites Only mode, custom redirect URL, break snooze, settings lock, disable cooldown, and regex syntax.</span>
+      </div>
+      <button id="dismiss-whats-new" type="button" class="btn btn-small btn-banner-dismiss">Dismiss</button>
     </div>
 
-    <fieldset id="sync-details" class="standalone-fieldset">
-      <div class="option baseline">
-        <label>Your Sync Key:</label>
-        <div class="sync-key-row">
-          <input type="password" id="sync-key-input" class="text-input font-mono" placeholder="Generate key or paste existing" spellcheck="false" style="min-width: 280px;" />
-          <button id="toggle-key-visibility-btn" type="button" class="btn btn-secondary">👁 Show</button>
-          <button id="copy-sync-key-btn" type="button" class="btn btn-secondary">📋 Copy</button>
-          <button id="generate-sync-key-btn" type="button" class="btn btn-secondary">⚡ Generate New</button>
-        </div>
-      </div>
-
-      <div class="option baseline">
-        <label>Sync Server URL:</label>
-        <div class="sync-server-row">
-          <input type="text" id="sync-server-url" class="text-input" value="http://127.0.0.1:8765/sync" style="min-width: 280px;" />
-          <button id="sync-now-btn" type="button" class="btn btn-primary">🔄 Sync Now</button>
-          <span id="sync-status-badge" class="badge inactive">Not synced</span>
-        </div>
-      </div>
-
-      <div class="whisper-info-card">
-        <strong>Zero-Knowledge End-to-End Encryption:</strong> Your blocked rules, daily limits, schedules, and accountability phrases are encrypted on your device with <strong>AES-GCM (256-bit)</strong> before uploading. The server cannot read your data. Paste this Sync Key into Opera GX, Vivaldi, Firefox, or Chrome to keep your rules identical across all browsers.
-      </div>
-    </fieldset>
-  </div>
-
-  <div class="section-divider"></div>
-
-  <h3>Focus & Anti-Tamper</h3>
-  <div class="options">
-    <div class="option">
-      <label>Disable Cooldown:</label>
-      <select id="disable-delay">
-        <option value="0">Instant (No delay)</option>
-        <option value="30">30 seconds</option>
-        <option value="60">1 minute</option>
-        <option value="120">2 minutes</option>
-        <option value="300">5 minutes</option>
-      </select>
-    </div>
-
-    <div class="option">
-      <label>Lock settings for focus:</label>
-      <div class="lock-controls">
-        <select id="lock-duration">
-          <option value="15">15 minutes</option>
-          <option value="30">30 minutes</option>
-          <option value="60">1 hour</option>
-          <option value="240">4 hours</option>
-          <option value="480">8 hours</option>
-        </select>
-        <button id="lock-btn" type="button" class="btn btn-secondary">Lock Settings</button>
+    <div id="locked-banner" class="banner locked-banner hidden">
+      <div class="banner-content">
+        <span class="banner-badge">[LOCKED]</span>
+        <span>Settings are strictly locked until <strong id="locked-time">--:--</strong> to protect focus.</span>
       </div>
     </div>
-  </div>
 
-  <!-- Syntax Reference Help Modal -->
-  <div id="syntax-modal" class="modal-backdrop hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Syntax Reference Guide</h3>
-        <button id="close-syntax-modal" type="button" class="close-btn">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p>You can configure rules to block or allow domains, subdomains, specific paths, query parameters, or page titles.</p>
-        
-        <table class="syntax-table">
-          <thead>
-            <tr>
-              <th>Pattern</th>
-              <th>Meaning</th>
-              <th>Example</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>example.com</code></td>
-              <td>Block domain and any subpages</td>
-              <td><code>reddit.com</code></td>
-            </tr>
-            <tr>
-              <td><code>!rule</code></td>
-              <td>Allow / Exclude from blocking</td>
-              <td><code>!sub.example.com</code></td>
-            </tr>
-            <tr>
-              <td><code>*</code></td>
-              <td>Wildcard: matches 0 or more characters</td>
-              <td><code>*.example.com/*</code>, <code>*shorts*</code></td>
-            </tr>
-            <tr>
-              <td><code>?</code></td>
-              <td>Single character: matches exactly 1 character</td>
-              <td><code>example.com/???/</code></td>
-            </tr>
-            <tr>
-              <td><code>\?</code></td>
-              <td>Literal question mark (for query strings)</td>
-              <td><code>youtube.com/watch\?v=*</code></td>
-            </tr>
-            <tr>
-              <td><code>/regex/</code></td>
-              <td>Regular expression rule</td>
-              <td><code>/.{3,}\.example\.com/</code></td>
-            </tr>
-            <tr>
-              <td><code>title:*word*</code></td>
-              <td>Match against tab / page title</td>
-              <td><code>title:*Shorts*</code></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="syntax-tip">
-          <strong>Tip:</strong> In <em>Approved Sites Only</em> mode, all websites are blocked except rules prefixed with <code>!</code>.
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Disable Delay Countdown Overlay -->
-  <div id="cooldown-modal" class="modal-backdrop hidden">
-    <div class="modal-card cooldown-card">
-      <h3>Take a breath...</h3>
-      <p>Disabling ScrollTax in <strong id="cooldown-timer">60</strong> seconds.</p>
-      <p class="cooldown-quote">"Focus is a muscle. Are you sure you want to doomscroll?"</p>
-      <div class="modal-actions">
-        <button id="cancel-cooldown-btn" type="button" class="btn btn-primary">Keep It Active</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- The Mirror of Accountability Modal (Required to delete a Daily Time Limit) -->
-  <div id="mirror-modal" class="modal-backdrop hidden">
-    <div class="modal-card mirror-card">
-      <div class="modal-header">
-        <div class="modal-title-row">
-          <h3>🪞 The Mirror of Accountability</h3>
-          <span id="whisper-modal-status" class="server-status-pill">Checking Whisper...</span>
-        </div>
-        <button id="close-mirror-btn" type="button" class="close-btn">&times;</button>
-      </div>
-
-      <div id="mirror-challenge-section">
-        <p class="mirror-instructions">
-          Look yourself in the eyes. To delete the daily time limit for <strong id="mirror-target-domain">this site</strong>, repeat this phrase
-          <strong id="required-repeat-count">3</strong> times:
-        </p>
-
-        <div id="challenge-phrase-display" class="phrase-display">
-          "I am wasting my time and I need to get back to work"
-        </div>
-
-        <div class="mirror-container">
-          <video id="mirror-video" autoplay playsinline muted></video>
-          <div id="recording-overlay" class="recording-overlay hidden">
-            <span class="pulsing-dot"></span>
-            <span id="recording-status-text">Listening with MLX Whisper...</span>
+    <main class="settings-content">
+      <!-- Section 1: Core Protection -->
+      <section class="settings-card glass-panel">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="svg-icon header-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <div>
+              <h2 class="card-title">Core Protection</h2>
+              <p class="card-subtitle">Global blocking status and enforcement modes</p>
+            </div>
           </div>
         </div>
 
-        <div id="verification-status" class="verification-status">
-          Click "Start Speaking" and repeat the phrase.
+        <div class="options">
+          <div id="enabled-option" class="option settings-row">
+            <div class="option-label-group">
+              <label for="enabled">Protection Enabled</label>
+              <span class="option-desc">Activate website blocking and time limit enforcement</span>
+            </div>
+            <div class="control-wrapper">
+              <select id="enabled" class="select-input">
+                <option value="YES">Active (Enabled)</option>
+                <option value="NO">Inactive (Disabled)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="mode-option" class="option settings-row">
+            <div class="option-label-group">
+              <label for="mode">Browsing Mode</label>
+              <span class="option-desc">Choose between blocking specific sites or only allowing approved ones</span>
+            </div>
+            <div class="control-wrapper">
+              <select id="mode" class="select-input">
+                <option value="BLOCKLIST">Blocklist (Block listed sites)</option>
+                <option value="WHITELIST">Approved Sites Only (Block all except allowed)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="context-menu-option" class="option settings-row">
+            <div class="option-label-group">
+              <label for="context-menu">Right-Click Context Menu</label>
+              <span class="option-desc">Show block actions in the browser context menu</span>
+            </div>
+            <div class="control-wrapper">
+              <select id="context-menu" class="select-input">
+                <option value="YES">Yes (Enabled)</option>
+                <option value="NO">No (Disabled)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Blocked / Allowed Rules -->
+      <section class="settings-card glass-panel">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="svg-icon header-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <div>
+              <h2 class="card-title">Sites to Block and Allow</h2>
+              <p class="card-subtitle">One pattern per line. Supports wildcards, query strings, and regex.</p>
+            </div>
+          </div>
         </div>
 
-        <div id="transcript-display" class="transcript-display hidden"></div>
+        <div id="blocked-container" class="blocked-editor-container">
+          <div class="blocked-header">
+            <div class="editor-header-left">
+              <span class="editor-badge">Rules List</span>
+              <span class="editor-subtext">Changes save automatically</span>
+            </div>
+            <div class="editor-header-right">
+              <span class="editor-tip">Prefix with <code>!</code> to whitelist</span>
+            </div>
+          </div>
+          <textarea id="blocked-list" rows="10" cols="50" spellcheck="false" class="code-editor" placeholder="example.com&#10;reddit.com&#10;!allowed.example.com"></textarea>
+        </div>
+      </section>
 
-        <div class="mirror-actions">
-          <button id="record-btn" type="button" class="btn btn-record">🎙️ Start Speaking</button>
-          <button id="cancel-mirror-challenge" type="button" class="btn btn-secondary">Cancel</button>
+      <!-- Section 3: Block Resolution and Behavior -->
+      <section class="settings-card glass-panel">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="svg-icon header-icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <div>
+              <h2 class="card-title">Blocked Page Resolution</h2>
+              <p class="card-subtitle">Define what happens when a restricted website is opened</p>
+            </div>
+          </div>
         </div>
 
-        <div class="mirror-fallback-section">
-          <button id="toggle-type-btn" type="button" class="text-link-btn">⌨️ Microphone issue? Type phrase manually instead</button>
-          <div id="type-fallback-container" class="type-fallback-container hidden">
-            <textarea id="typed-phrase-input" class="text-input" placeholder="Type the confession phrase here..."></textarea>
-            <button id="verify-typed-btn" type="button" class="btn btn-primary btn-small">Verify Typed Phrase</button>
+        <div class="options">
+          <div id="resolution-option" class="option baseline settings-row">
+            <div class="option-label-group">
+              <label for="resolution">How to Resolve Blocked Visits</label>
+              <span class="option-desc">Choose whether to immediately close the tab, show the info screen, or redirect</span>
+            </div>
+            <div class="resolution-controls">
+              <select id="resolution" class="select-input">
+                <option value="CLOSE_TAB">Close Tab</option>
+                <option value="SHOW_BLOCKED_INFO_PAGE">Show Blocked info page</option>
+                <option value="REDIRECT">Redirect to URL</option>
+              </select>
+
+              <fieldset id="redirect-details" class="sub-fieldset nested-card">
+                <div class="option settings-row-nested">
+                  <label for="redirect-url">Redirect Target URL:</label>
+                  <input type="text" id="redirect-url" placeholder="https://www.google.com" class="text-input" />
+                </div>
+              </fieldset>
+
+              <fieldset id="blocked-info-page-details" class="sub-fieldset nested-card">
+                <div class="option settings-row-nested">
+                  <label for="counter-show">Show Blocked Counter?</label>
+                  <select id="counter-show" class="select-input select-small">
+                    <option value="YES">Yes</option>
+                    <option value="NO">No</option>
+                  </select>
+                </div>
+
+                <div id="counter-period-option" class="option settings-row-nested">
+                  <label for="counter-period">Blocked Count Period:</label>
+                  <select id="counter-period" class="select-input select-small">
+                    <option value="ALL_TIME">All Time</option>
+                    <option value="THIS_MONTH">This Month</option>
+                    <option value="THIS_WEEK">This Week</option>
+                    <option value="TODAY">Today</option>
+                  </select>
+                </div>
+              </fieldset>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Daily Time Limits per Website -->
+      <section class="settings-card glass-panel">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="svg-icon header-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <div>
+              <h2 class="card-title">Daily Time Limits per Website</h2>
+              <p class="card-subtitle">Set specific daily minute budgets. Once reached, access is locked until tomorrow or until an extension is earned.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="options">
+          <div class="time-limit-form">
+            <div class="input-with-label">
+              <label for="limit-domain" class="sr-only">Domain</label>
+              <input type="text" id="limit-domain" placeholder="Domain (e.g. youtube.com or reddit.com)" class="text-input domain-input" />
+            </div>
+            <div class="minutes-input-group">
+              <input type="number" id="limit-minutes" min="1" max="1440" placeholder="15" class="number-input" />
+              <span class="unit-label">min / day</span>
+            </div>
+            <div class="form-btn-group">
+              <button id="set-limit-btn" type="button" class="btn btn-primary">
+                <span>Set Limit</span>
+              </button>
+              <button id="update-limit-btn" type="button" class="btn btn-secondary">
+                <span>Update</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="time-limits-container" class="time-limits-container">
+            <table class="time-limits-table">
+              <thead>
+                <tr>
+                  <th>Website Domain</th>
+                  <th>Daily Allowance</th>
+                  <th>Usage Today</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="time-limits-tbody">
+                <tr class="empty-row"><td colspan="4">No site limits configured yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: The Mirror of Accountability -->
+      <section class="settings-card glass-panel">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="svg-icon header-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            <div>
+              <h2 class="card-title">The Mirror of Accountability</h2>
+              <p class="card-subtitle">Confrontation video challenge verified locally by OpenAI Whisper via Apple Silicon MLX</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="options">
+          <div class="option baseline settings-row">
+            <div class="option-label-group">
+              <label for="challenge-phrase">Accountability Phrase</label>
+              <span class="option-desc">The confession phrase you must repeat into the microphone</span>
+            </div>
+            <div class="control-wrapper full-width-wrapper">
+              <input type="text" id="challenge-phrase" class="text-input full-width" placeholder="I am wasting my time and I need to get back to work" />
+            </div>
+          </div>
+
+          <div class="option settings-row">
+            <div class="option-label-group">
+              <label for="challenge-repeat-count">Repetition Count</label>
+              <span class="option-desc">How many times you must speak the confession aloud</span>
+            </div>
+            <div class="control-wrapper stepper-group">
+              <input type="number" id="challenge-repeat-count" min="1" max="10" value="3" class="number-input" />
+              <span class="input-hint">times to repeat</span>
+            </div>
+          </div>
+
+          <div class="option baseline settings-row">
+            <div class="option-label-group">
+              <label for="whisper-server-url">Local Whisper Server</label>
+              <span class="option-desc">Apple Silicon Neural Engine server for offline transcription</span>
+            </div>
+            <div class="control-wrapper">
+              <div class="whisper-server-row">
+                <input type="text" id="whisper-server-url" class="text-input font-mono" value="http://127.0.0.1:8765" />
+                <button id="test-whisper-btn" type="button" class="btn btn-secondary">Test Connection</button>
+                <span id="whisper-status-badge" class="badge">Checking...</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-card whisper-info-card">
+            <div class="info-card-text">
+              <strong>Apple Silicon MLX Whisper Integration:</strong> Runs 100% locally on Apple Silicon Neural Engine and GPU with zero cloud latency. If the local server is offline, browser Web Speech API is used as automatic fallback.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 6: Block Schedule -->
+      <section class="settings-card glass-panel">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="svg-icon header-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <div>
+              <h2 class="card-title">Block Schedule</h2>
+              <p class="card-subtitle">Automate focus enforcement during specific work hours or study times</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="options">
+          <div class="option settings-row">
+            <div class="option-label-group">
+              <label for="schedule-enabled">Scheduled Blocking</label>
+              <span class="option-desc">Enforce restrictions only during active scheduled hours</span>
+            </div>
+            <div class="control-wrapper">
+              <select id="schedule-enabled" class="select-input">
+                <option value="NO">No (Always Active)</option>
+                <option value="YES">Yes (Only during schedule)</option>
+              </select>
+            </div>
+          </div>
+
+          <fieldset id="schedule-details" class="standalone-fieldset nested-card">
+            <div class="option settings-row-nested">
+              <span class="field-label">Active Days:</span>
+              <div id="schedule-days" class="days-container">
+                <label class="day-checkbox"><input type="checkbox" value="1"> <span>Mon</span></label>
+                <label class="day-checkbox"><input type="checkbox" value="2"> <span>Tue</span></label>
+                <label class="day-checkbox"><input type="checkbox" value="3"> <span>Wed</span></label>
+                <label class="day-checkbox"><input type="checkbox" value="4"> <span>Thu</span></label>
+                <label class="day-checkbox"><input type="checkbox" value="5"> <span>Fri</span></label>
+                <label class="day-checkbox"><input type="checkbox" value="6"> <span>Sat</span></label>
+                <label class="day-checkbox"><input type="checkbox" value="0"> <span>Sun</span></label>
+              </div>
+            </div>
+            <div class="option settings-row-nested">
+              <span class="field-label">Active Time Window:</span>
+              <div class="time-range-inputs">
+                <input type="time" id="schedule-start" value="09:00" class="time-input" />
+                <span class="time-separator">to</span>
+                <input type="time" id="schedule-end" value="17:00" class="time-input" />
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <!-- Section 7: Cross-Browser Cloud Sync & Settings Transfer -->
+      <section class="settings-card glass-panel">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="svg-icon header-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+            <div>
+              <h2 class="card-title">Cross-Browser Sync &amp; Transfer</h2>
+              <p class="card-subtitle">Keep your blocklist, daily limits, and schedules synchronized across browsers or transfer with 1 click</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="options">
+          <!-- Instant Transfer (Zero-Server, Zero-Terminal) -->
+          <div class="option settings-row instant-transfer-row">
+            <div class="option-label-group">
+              <label>Instant Transfer (No Server)</label>
+              <span class="option-desc">Export or copy your settings to clipboard to easily migrate to Vivaldi, Chrome, or Firefox</span>
+            </div>
+            <div class="control-wrapper transfer-btn-group">
+              <button id="export-clipboard-btn" type="button" class="btn btn-secondary">📋 Copy to Clipboard</button>
+              <button id="export-file-btn" type="button" class="btn btn-secondary">💾 Export Backup</button>
+              <button id="open-import-btn" type="button" class="btn btn-primary">📥 Import Settings</button>
+              <input type="file" id="import-file-input" accept=".json,application/json" class="hidden" />
+            </div>
+          </div>
+          <div id="transfer-feedback" class="transfer-feedback hidden"></div>
+
+          <div class="option settings-row">
+            <div class="option-label-group">
+              <label for="sync-enabled">Continuous Cloud Sync</label>
+              <span class="option-desc">Auto-sync rules securely in real time across Chrome, Firefox, Opera, and Vivaldi</span>
+            </div>
+            <div class="control-wrapper">
+              <select id="sync-enabled" class="select-input">
+                <option value="NO">No (Local Only)</option>
+                <option value="YES">Yes (Encrypted Sync)</option>
+              </select>
+            </div>
+          </div>
+
+          <fieldset id="sync-details" class="standalone-fieldset nested-card">
+            <!-- Visual 3-Step Pairing Guide -->
+            <div class="sync-steps-card">
+              <div class="sync-step">
+                <span class="sync-step-badge">1</span>
+                <span class="sync-step-text"><strong>On this browser:</strong> Click <em>"Generate New"</em> and copy your Secret Key.</span>
+              </div>
+              <div class="sync-step">
+                <span class="sync-step-badge">2</span>
+                <span class="sync-step-text"><strong>On your other browser:</strong> Enable Sync and paste your Secret Key.</span>
+              </div>
+              <div class="sync-step">
+                <span class="sync-step-badge">3</span>
+                <span class="sync-step-text"><strong>Done:</strong> Click <em>"Sync Now"</em>. Both browsers stay continuously synced!</span>
+              </div>
+            </div>
+
+            <div class="option baseline settings-row-nested">
+              <label for="sync-key-input">Your Secret Sync Key:</label>
+              <div class="sync-key-row">
+                <input type="password" id="sync-key-input" class="text-input font-mono sync-key-input" placeholder="Generate key or paste existing" spellcheck="false" />
+                <div class="btn-group">
+                  <button id="toggle-key-visibility-btn" type="button" class="btn btn-secondary btn-icon-only" title="Show or Hide Key">Show</button>
+                  <button id="copy-sync-key-btn" type="button" class="btn btn-secondary btn-icon-only" title="Copy Key">Copy</button>
+                  <button id="generate-sync-key-btn" type="button" class="btn btn-secondary">Generate New</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="option baseline settings-row-nested">
+              <div class="option-label-group">
+                <label for="sync-server-url">Sync Server URL:</label>
+                <span class="option-desc">Local Python server or Cloudflare Worker</span>
+              </div>
+              <div class="sync-server-row">
+                <input type="text" id="sync-server-url" class="text-input font-mono" value="http://127.0.0.1:8765/sync" />
+                <button id="test-sync-server-btn" type="button" class="btn btn-secondary">Test Server</button>
+                <button id="sync-now-btn" type="button" class="btn btn-primary">Sync Now</button>
+                <span id="sync-status-badge" class="badge inactive">Not synced</span>
+              </div>
+            </div>
+
+            <!-- Offline Local Server Diagnostic & 1-Click Command -->
+            <div id="sync-offline-tip" class="tip-card warning hidden">
+              <div class="tip-card-content">
+                <div class="tip-card-header">
+                  <strong>⚠️ Local Sync Server Offline</strong>
+                  <span class="tip-target-host">Target: <code>127.0.0.1:8765</code></span>
+                </div>
+                <p class="tip-subtext">If syncing browsers on this Mac, start the local server in your terminal:</p>
+                <div class="code-copy-row">
+                  <code class="font-mono">bash server/start.sh</code>
+                  <button id="copy-sync-start-cmd-btn" type="button" class="btn btn-secondary btn-small">Copy Command</button>
+                </div>
+                <p class="tip-subtext-muted">✨ Note: The local MLX-Whisper server includes sync automatically on the same port.</p>
+              </div>
+            </div>
+
+            <div class="info-card sync-info-card">
+              <div class="info-card-text">
+                <strong>Zero-Knowledge End-to-End Encryption:</strong> Rules, daily limits, schedules, and phrases are encrypted on your device with <strong>AES-GCM (256-bit)</strong> prior to upload. The server cannot decrypt or inspect your data.
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <!-- Section 8: Focus and Anti-Tamper -->
+      <section class="settings-card glass-panel">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="svg-icon header-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <div>
+              <h2 class="card-title">Focus and Anti-Tamper</h2>
+              <p class="card-subtitle">Prevent impulsive override clicks and protect against subconscious browsing habits</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="options">
+          <div class="option settings-row">
+            <div class="option-label-group">
+              <label for="disable-delay">Disable Cooldown</label>
+              <span class="option-desc">Forces a countdown timer before allowing you to turn off protection</span>
+            </div>
+            <div class="control-wrapper">
+              <select id="disable-delay" class="select-input">
+                <option value="0">Instant (No delay)</option>
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="120">2 minutes</option>
+                <option value="300">5 minutes</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="option settings-row">
+            <div class="option-label-group">
+              <label for="lock-duration">Lock Settings for Focus</label>
+              <span class="option-desc">Freeze options and prevent rule modifications for a set period</span>
+            </div>
+            <div class="control-wrapper lock-controls">
+              <select id="lock-duration" class="select-input">
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="240">4 hours</option>
+                <option value="480">8 hours</option>
+              </select>
+              <button id="lock-btn" type="button" class="btn btn-warning">Lock Settings</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Syntax Reference Help Modal -->
+    <div id="syntax-modal" class="modal-backdrop hidden">
+      <div class="modal-card glass-modal">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <svg class="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <h3 class="modal-title">Rule Syntax Reference Guide</h3>
+          </div>
+          <button id="close-syntax-modal" type="button" class="close-btn" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-intro">Configure precise rules to block or allow domains, subdomains, paths, query parameters, or tab titles:</p>
+          
+          <table class="syntax-table">
+            <thead>
+              <tr>
+                <th>Pattern</th>
+                <th>Meaning</th>
+                <th>Example</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>example.com</code></td>
+                <td>Block entire domain and subpages</td>
+                <td><code>reddit.com</code></td>
+              </tr>
+              <tr>
+                <td><code>!rule</code></td>
+                <td>Allow / Exclude from blocking (Whitelist)</td>
+                <td><code>!sub.example.com</code></td>
+              </tr>
+              <tr>
+                <td><code>*</code></td>
+                <td>Wildcard: matches 0 or more characters</td>
+                <td><code>*.example.com/*</code>, <code>*shorts*</code></td>
+              </tr>
+              <tr>
+                <td><code>?</code></td>
+                <td>Single character match</td>
+                <td><code>example.com/???/</code></td>
+              </tr>
+              <tr>
+                <td><code>\?</code></td>
+                <td>Literal question mark (for query strings)</td>
+                <td><code>youtube.com/watch\?v=*</code></td>
+              </tr>
+              <tr>
+                <td><code>/regex/</code></td>
+                <td>Regular expression matching</td>
+                <td><code>/.{3,}\.example\.com/</code></td>
+              </tr>
+              <tr>
+                <td><code>title:*word*</code></td>
+                <td>Match against tab / page title</td>
+                <td><code>title:*Shorts*</code></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="syntax-tip">
+            <strong>Note:</strong> In <em>Approved Sites Only</em> mode, all web browsing is blocked except for rules prefixed with <code>!</code>.
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <p id="credits">
-    Created by <a target="_blank" href="https://github.com/Nikhil-Mundhra">Nikhil Mundhra</a><br>
-    Support ScrollTax with a <span id="star">★</span> on <a target="_blank" href="https://github.com/Nikhil-Mundhra/Web-Blocker">GitHub</a>
-  </p>
+    <!-- Disable Delay Countdown Overlay -->
+    <div id="cooldown-modal" class="modal-backdrop hidden">
+      <div class="modal-card cooldown-card glass-modal">
+        <div class="cooldown-badge-wrapper">
+          <span class="cooldown-badge">[PAUSE]</span>
+        </div>
+        <h3 class="cooldown-title">Take a Mindful Breath</h3>
+        <p class="cooldown-subtitle">ScrollTax will disable in <strong id="cooldown-timer" class="timer-countdown">60</strong> seconds.</p>
+        <div class="cooldown-quote-card">
+          <p class="cooldown-quote">"Focus is a muscle that grows with resistance. Are you sure you want to doomscroll?"</p>
+        </div>
+        <div class="modal-actions">
+          <button id="cancel-cooldown-btn" type="button" class="btn btn-primary btn-large">Keep Protection Active</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- The Mirror of Accountability Modal (Required to delete a Daily Time Limit) -->
+    <div id="mirror-modal" class="modal-backdrop hidden">
+      <div class="modal-card mirror-card glass-modal">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <svg class="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            <h3 class="modal-title">The Mirror of Accountability</h3>
+            <span id="whisper-modal-status" class="server-status-pill">Checking Whisper...</span>
+          </div>
+          <button id="close-mirror-btn" type="button" class="close-btn" aria-label="Close">&times;</button>
+        </div>
+
+        <div id="mirror-challenge-section">
+          <p class="mirror-instructions">
+            Look yourself in the eyes. To delete the daily time limit for <strong id="mirror-target-domain">this site</strong>, repeat this confession phrase
+            <strong id="required-repeat-count">3</strong> times into your microphone:
+          </p>
+
+          <div id="challenge-phrase-display" class="phrase-display">
+            "I am wasting my time and I need to get back to work"
+          </div>
+
+          <div class="mirror-container">
+            <video id="mirror-video" autoplay playsinline muted></video>
+            <div id="recording-overlay" class="recording-overlay hidden">
+              <span class="pulsing-dot"></span>
+              <span id="recording-status-text">Listening with MLX Whisper...</span>
+            </div>
+          </div>
+
+          <div id="verification-status" class="verification-status">
+            Click "Start Speaking" and repeat the phrase aloud.
+          </div>
+
+          <div id="transcript-display" class="transcript-display hidden"></div>
+
+          <div class="mirror-actions">
+            <button id="record-btn" type="button" class="btn btn-record">Start Speaking</button>
+            <button id="cancel-mirror-challenge" type="button" class="btn btn-secondary">Cancel</button>
+          </div>
+
+          <div class="mirror-fallback-section">
+            <button id="toggle-type-btn" type="button" class="text-link-btn">Microphone issue? Type phrase manually instead</button>
+            <div id="type-fallback-container" class="type-fallback-container hidden">
+              <textarea id="typed-phrase-input" class="text-input" placeholder="Type the confession phrase here..."></textarea>
+              <button id="verify-typed-btn" type="button" class="btn btn-primary btn-small">Verify Typed Phrase</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Settings Modal -->
+    <div id="import-modal" class="modal-backdrop hidden">
+      <div class="modal-card import-card glass-modal">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <svg class="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <h3 class="modal-title">Import Settings</h3>
+          </div>
+          <button id="close-import-btn" type="button" class="close-btn" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="import-modal-body">
+          <p class="modal-description">Restore settings from a downloaded backup file or paste exported JSON from another browser.</p>
+
+          <div class="import-actions-row">
+            <button id="choose-import-file-btn" type="button" class="btn btn-secondary">📁 Choose JSON File</button>
+            <span class="text-muted">or paste JSON below:</span>
+          </div>
+
+          <textarea id="import-json-input" class="text-input font-mono import-textarea" placeholder='{"blocked": ["youtube.com"], "mode": "BLOCKLIST", ...}' rows="8"></textarea>
+
+          <div id="import-error-msg" class="import-error-msg hidden"></div>
+
+          <div class="modal-actions">
+            <button id="confirm-import-btn" type="button" class="btn btn-primary">Apply &amp; Restore Settings</button>
+            <button id="cancel-import-btn" type="button" class="btn btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- App Footer -->
+    <footer class="app-footer">
+      <p id="credits" class="credits-text">
+        Created by <a target="_blank" href="https://github.com/Nikhil-Mundhra">Nikhil Mundhra</a> &bull;
+        View source code on <a target="_blank" href="https://github.com/Nikhil-Mundhra/Web-Blocker">GitHub</a>
+      </p>
+    </footer>
+  </div>
 </body>
 
 </html>

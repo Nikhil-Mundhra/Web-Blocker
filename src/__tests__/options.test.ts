@@ -398,4 +398,179 @@ describe("Options Page Integration Test", () => {
 
     global.fetch = originalFetch;
   });
+
+  it("exports settings to clipboard", async () => {
+    const mockWriteText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText: mockWriteText },
+    });
+
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const exportBtn = document.getElementById("export-clipboard-btn") as HTMLButtonElement;
+    const feedback = document.getElementById("transfer-feedback") as HTMLDivElement;
+
+    exportBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(mockWriteText).toHaveBeenCalled();
+    const copiedJson = JSON.parse(mockWriteText.mock.calls[0][0]);
+    expect(copiedJson.blocked).toEqual(["example.com"]);
+    expect(feedback.classList.contains("hidden")).toBe(false);
+    expect(feedback.textContent).toContain("Settings copied to clipboard");
+  });
+
+  it("exports settings to a downloadable JSON file", async () => {
+    const originalCreateObjectURL = window.URL.createObjectURL;
+    const originalRevokeObjectURL = window.URL.revokeObjectURL;
+    const originalAnchorClick = HTMLAnchorElement.prototype.click;
+    window.URL.createObjectURL = jest.fn().mockReturnValue("blob:mock-url");
+    window.URL.revokeObjectURL = jest.fn();
+    HTMLAnchorElement.prototype.click = jest.fn();
+
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const exportFileBtn = document.getElementById("export-file-btn") as HTMLButtonElement;
+    const feedback = document.getElementById("transfer-feedback") as HTMLDivElement;
+
+    exportFileBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(window.URL.createObjectURL).toHaveBeenCalled();
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+    expect(feedback.classList.contains("hidden")).toBe(false);
+    expect(feedback.textContent).toContain("Backup file downloaded");
+
+    window.URL.createObjectURL = originalCreateObjectURL;
+    window.URL.revokeObjectURL = originalRevokeObjectURL;
+    HTMLAnchorElement.prototype.click = originalAnchorClick;
+  });
+
+  it("imports settings JSON via import modal and saves to storage", async () => {
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const openImportBtn = document.getElementById("open-import-btn") as HTMLButtonElement;
+    const importModal = document.getElementById("import-modal") as HTMLDivElement;
+    const importJsonInput = document.getElementById("import-json-input") as HTMLTextAreaElement;
+    const confirmImportBtn = document.getElementById("confirm-import-btn") as HTMLButtonElement;
+    const closeImportBtn = document.getElementById("close-import-btn") as HTMLButtonElement;
+
+    openImportBtn.click();
+    expect(importModal.classList.contains("hidden")).toBe(false);
+
+    closeImportBtn.click();
+    expect(importModal.classList.contains("hidden")).toBe(true);
+
+    openImportBtn.click();
+    importJsonInput.value = JSON.stringify({
+      blocked: ["imported-site.org"],
+      mode: "WHITELIST",
+      timeLimits: { "imported-site.org": 15 },
+    });
+
+    confirmImportBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(mockStorageSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blocked: ["imported-site.org"],
+        mode: "WHITELIST",
+        timeLimits: { "imported-site.org": 15 },
+      }),
+    );
+    expect(importModal.classList.contains("hidden")).toBe(true);
+  });
+
+  it("handles invalid JSON when importing", async () => {
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const openImportBtn = document.getElementById("open-import-btn") as HTMLButtonElement;
+    const importJsonInput = document.getElementById("import-json-input") as HTMLTextAreaElement;
+    const confirmImportBtn = document.getElementById("confirm-import-btn") as HTMLButtonElement;
+    const errorMsg = document.getElementById("import-error-msg") as HTMLDivElement;
+
+    openImportBtn.click();
+    importJsonInput.value = "this-is-not-valid-json";
+    confirmImportBtn.click();
+
+    expect(errorMsg.classList.contains("hidden")).toBe(false);
+    expect(errorMsg.textContent).toContain("Failed to import");
+  });
+
+  it("tests sync server health and toggles offline tip", async () => {
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const testBtn = document.getElementById("test-sync-server-btn") as HTMLButtonElement;
+    const statusBadge = document.getElementById("sync-status-badge") as HTMLSpanElement;
+    const offlineTip = document.getElementById("sync-offline-tip") as HTMLDivElement;
+
+    // Mock online sync server
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: "ok" }),
+    });
+
+    testBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(statusBadge.textContent).toContain("Server Online");
+    expect(offlineTip.classList.contains("hidden")).toBe(true);
+
+    // Mock offline sync server
+    (global.fetch as jest.Mock).mockRejectedValue(new Error("Connection refused"));
+    testBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(statusBadge.textContent).toContain("Server Offline");
+    expect(offlineTip.classList.contains("hidden")).toBe(false);
+
+    global.fetch = originalFetch;
+  });
+
+  it("copies terminal start command from offline tip to clipboard", async () => {
+    const mockWriteText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText: mockWriteText },
+    });
+
+    jest.isolateModules(() => {
+      require("../options");
+    });
+
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+    await new Promise((r) => setTimeout(r, 20));
+
+    const copyCmdBtn = document.getElementById("copy-sync-start-cmd-btn") as HTMLButtonElement;
+    copyCmdBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(mockWriteText).toHaveBeenCalledWith("bash server/start.sh");
+    expect(copyCmdBtn.textContent).toBe("✓ Copied!");
+  });
 });

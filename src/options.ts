@@ -90,6 +90,22 @@ const UI = (() => {
     typedPhraseInput: document.getElementById("typed-phrase-input") as HTMLTextAreaElement,
     verifyTypedBtn: document.getElementById("verify-typed-btn") as HTMLButtonElement,
 
+    // Instant Transfer & Backup
+    exportClipboardBtn: document.getElementById("export-clipboard-btn") as HTMLButtonElement | null,
+    exportFileBtn: document.getElementById("export-file-btn") as HTMLButtonElement | null,
+    openImportBtn: document.getElementById("open-import-btn") as HTMLButtonElement | null,
+    importFileInput: document.getElementById("import-file-input") as HTMLInputElement | null,
+    transferFeedback: document.getElementById("transfer-feedback") as HTMLDivElement | null,
+
+    // Import Modal
+    importModal: document.getElementById("import-modal") as HTMLDivElement | null,
+    closeImportBtn: document.getElementById("close-import-btn") as HTMLButtonElement | null,
+    cancelImportBtn: document.getElementById("cancel-import-btn") as HTMLButtonElement | null,
+    chooseImportFileBtn: document.getElementById("choose-import-file-btn") as HTMLButtonElement | null,
+    importJsonInput: document.getElementById("import-json-input") as HTMLTextAreaElement | null,
+    confirmImportBtn: document.getElementById("confirm-import-btn") as HTMLButtonElement | null,
+    importErrorMsg: document.getElementById("import-error-msg") as HTMLDivElement | null,
+
     // Cloud Sync
     syncEnabled: document.getElementById("sync-enabled") as HTMLSelectElement,
     syncKeyInput: document.getElementById("sync-key-input") as HTMLInputElement,
@@ -97,8 +113,11 @@ const UI = (() => {
     copySyncKeyBtn: document.getElementById("copy-sync-key-btn") as HTMLButtonElement,
     generateSyncKeyBtn: document.getElementById("generate-sync-key-btn") as HTMLButtonElement,
     syncServerUrl: document.getElementById("sync-server-url") as HTMLInputElement,
+    testSyncServerBtn: document.getElementById("test-sync-server-btn") as HTMLButtonElement | null,
     syncNowBtn: document.getElementById("sync-now-btn") as HTMLButtonElement,
     syncStatusBadge: document.getElementById("sync-status-badge") as HTMLSpanElement,
+    syncOfflineTip: document.getElementById("sync-offline-tip") as HTMLDivElement | null,
+    copySyncStartCmdBtn: document.getElementById("copy-sync-start-cmd-btn") as HTMLButtonElement | null,
   };
 
   elements.blockedList.placeholder = BLOCKED_EXAMPLE.join("\n");
@@ -457,13 +476,13 @@ const UI = (() => {
     try {
       const resp = await fetch(`${whisperUrl}/health`);
       if (resp.ok) {
-        elements.whisperModalStatus.textContent = "🟢 MLX-Whisper Ready";
+        elements.whisperModalStatus.textContent = "[READY] MLX-Whisper Ready";
         elements.whisperModalStatus.className = "server-status-pill online";
       } else {
         throw new Error("HTTP error");
       }
     } catch {
-      elements.whisperModalStatus.textContent = "⚠️ Whisper Server Offline";
+      elements.whisperModalStatus.textContent = "[OFFLINE] Whisper Server Offline";
       elements.whisperModalStatus.className = "server-status-pill offline";
       elements.whisperModalStatus.title = "Start Whisper via terminal: bash server/start.sh";
     }
@@ -505,7 +524,7 @@ const UI = (() => {
     }
     isRecording = false;
     if (elements.recordBtn) {
-      elements.recordBtn.textContent = "🎙️ Start Speaking";
+      elements.recordBtn.textContent = "Start Speaking";
       elements.recordBtn.classList.remove("btn-danger");
     }
     if (elements.recordingOverlay) {
@@ -617,7 +636,7 @@ const UI = (() => {
     isRecording = true;
 
     if (elements.recordBtn) {
-      elements.recordBtn.textContent = "⏹️ Stop & Verify";
+      elements.recordBtn.textContent = "Stop & Verify";
       elements.recordBtn.classList.add("btn-danger");
     }
     if (elements.recordingOverlay) elements.recordingOverlay.classList.remove("hidden");
@@ -671,7 +690,7 @@ const UI = (() => {
   const stopRecordingAndVerify = async () => {
     isRecording = false;
     if (elements.recordBtn) {
-      elements.recordBtn.textContent = "🎙️ Start Speaking";
+      elements.recordBtn.textContent = "Start Speaking";
       elements.recordBtn.classList.remove("btn-danger");
     }
     if (elements.recordingOverlay) elements.recordingOverlay.classList.add("hidden");
@@ -796,13 +815,13 @@ const UI = (() => {
     try {
       const resp = await fetch(`${url}/health`, { method: "GET" });
       if (resp.ok) {
-        elements.whisperStatusBadge.textContent = "🟢 Online (MLX-Whisper)";
+        elements.whisperStatusBadge.textContent = "[ONLINE] Online (MLX-Whisper)";
         elements.whisperStatusBadge.className = "badge";
       } else {
         throw new Error("HTTP error");
       }
     } catch {
-      elements.whisperStatusBadge.textContent = "⚪ Offline (Web Speech Fallback)";
+      elements.whisperStatusBadge.textContent = "[OFFLINE] Offline (Web Speech Fallback)";
       elements.whisperStatusBadge.className = "badge inactive";
     }
   };
@@ -832,10 +851,10 @@ const UI = (() => {
   elements.toggleKeyVisibilityBtn.addEventListener("click", () => {
     if (elements.syncKeyInput.type === "password") {
       elements.syncKeyInput.type = "text";
-      elements.toggleKeyVisibilityBtn.textContent = "🙈 Hide";
+      elements.toggleKeyVisibilityBtn.textContent = "Hide";
     } else {
       elements.syncKeyInput.type = "password";
-      elements.toggleKeyVisibilityBtn.textContent = "👁 Show";
+      elements.toggleKeyVisibilityBtn.textContent = "Show";
     }
   });
 
@@ -845,7 +864,7 @@ const UI = (() => {
     try {
       await navigator.clipboard.writeText(key);
       const originalText = elements.copySyncKeyBtn.textContent;
-      elements.copySyncKeyBtn.textContent = "✅ Copied!";
+      elements.copySyncKeyBtn.textContent = "Copied";
       setTimeout(() => {
         elements.copySyncKeyBtn.textContent = originalText;
       }, 2000);
@@ -867,6 +886,201 @@ const UI = (() => {
     storage.set({ syncKey: newKey });
   });
 
+  // 14. Instant Transfer & Backup (No Server Required)
+  let transferFeedbackTimer: NodeJS.Timeout | null = null;
+  const showTransferFeedback = (msg: string, isError = false) => {
+    const feedbackEl = elements.transferFeedback;
+    if (!feedbackEl) return;
+    if (transferFeedbackTimer) clearTimeout(transferFeedbackTimer);
+    feedbackEl.textContent = msg;
+    feedbackEl.className = isError ? "transfer-feedback error" : "transfer-feedback";
+    feedbackEl.classList.remove("hidden");
+    transferFeedbackTimer = setTimeout(() => {
+      feedbackEl.classList.add("hidden");
+    }, 4000);
+  };
+
+  const showImportError = (msg: string) => {
+    const errEl = elements.importErrorMsg;
+    if (!errEl) return;
+    errEl.textContent = msg;
+    errEl.classList.remove("hidden");
+  };
+
+  const exportSettingsPayload = async () => {
+    const allLocal = await storage.getAll();
+    return extractSyncPayload(allLocal);
+  };
+
+  if (elements.exportClipboardBtn) {
+    elements.exportClipboardBtn.addEventListener("click", async () => {
+      try {
+        const payload = await exportSettingsPayload();
+        const jsonStr = JSON.stringify(payload, null, 2);
+        await navigator.clipboard.writeText(jsonStr);
+        showTransferFeedback("✓ Settings copied to clipboard! Paste in your other browser.", false);
+      } catch {
+        showTransferFeedback("Failed to copy settings to clipboard.", true);
+      }
+    });
+  }
+
+  if (elements.exportFileBtn) {
+    elements.exportFileBtn.addEventListener("click", async () => {
+      try {
+        const payload = await exportSettingsPayload();
+        const jsonStr = JSON.stringify(payload, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `scrolltax-settings-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showTransferFeedback("✓ Backup file downloaded successfully.", false);
+      } catch {
+        showTransferFeedback("Failed to export backup file.", true);
+      }
+    });
+  }
+
+  const openImportModal = () => {
+    if (elements.importModal) {
+      if (elements.importJsonInput) elements.importJsonInput.value = "";
+      if (elements.importErrorMsg) {
+        elements.importErrorMsg.textContent = "";
+        elements.importErrorMsg.classList.add("hidden");
+      }
+      elements.importModal.classList.remove("hidden");
+    }
+  };
+
+  const closeImportModal = () => {
+    if (elements.importModal) {
+      elements.importModal.classList.add("hidden");
+    }
+  };
+
+  if (elements.openImportBtn) elements.openImportBtn.addEventListener("click", openImportModal);
+  if (elements.closeImportBtn) elements.closeImportBtn.addEventListener("click", closeImportModal);
+  if (elements.cancelImportBtn) elements.cancelImportBtn.addEventListener("click", closeImportModal);
+
+  if (elements.chooseImportFileBtn && elements.importFileInput) {
+    elements.chooseImportFileBtn.addEventListener("click", () => {
+      elements.importFileInput?.click();
+    });
+
+    elements.importFileInput.addEventListener("change", (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        if (elements.importJsonInput) {
+          elements.importJsonInput.value = text;
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  if (elements.confirmImportBtn) {
+    elements.confirmImportBtn.addEventListener("click", async () => {
+      const rawText = elements.importJsonInput?.value.trim() || "";
+      if (!rawText) {
+        showImportError("Please choose a file or paste JSON settings first.");
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(rawText);
+        if (!parsed || typeof parsed !== "object") {
+          throw new Error("Invalid format: Expected a JSON object.");
+        }
+
+        const updates: Partial<Schema> = {};
+        if (Array.isArray(parsed.blocked)) updates.blocked = parsed.blocked;
+        if (parsed.mode && (parsed.mode === "BLOCKLIST" || parsed.mode === "WHITELIST")) updates.mode = parsed.mode;
+        if (parsed.timeLimits && typeof parsed.timeLimits === "object") updates.timeLimits = parsed.timeLimits;
+        if (typeof parsed.challengePhrase === "string") updates.challengePhrase = parsed.challengePhrase;
+        if (typeof parsed.challengeRepeatCount === "number") updates.challengeRepeatCount = parsed.challengeRepeatCount;
+        if (parsed.schedule && typeof parsed.schedule === "object") updates.schedule = parsed.schedule;
+        if (parsed.resolution) updates.resolution = parsed.resolution;
+        if (typeof parsed.redirectUrl === "string") updates.redirectUrl = parsed.redirectUrl;
+        if (typeof parsed.disableDelay === "number") updates.disableDelay = parsed.disableDelay;
+        if (typeof parsed.blockByTitle === "boolean") updates.blockByTitle = parsed.blockByTitle;
+
+        if (Object.keys(updates).length === 0) {
+          throw new Error("No recognized ScrollTax settings found in JSON.");
+        }
+
+        await storage.set(updates);
+        closeImportModal();
+        showTransferFeedback(`✓ Successfully imported ${Object.keys(updates).length} settings!`, false);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Invalid JSON";
+        showImportError(`Failed to import: ${msg}`);
+      }
+    });
+  }
+
+  // 15. Cloud Sync Server Testing & Command Copy
+  const checkSyncServerHealth = async (url: string) => {
+    if (elements.syncStatusBadge) {
+      elements.syncStatusBadge.textContent = "Connecting...";
+      elements.syncStatusBadge.className = "badge paused";
+    }
+
+    const clean = url.trim().replace(/\/+$/, "");
+    const healthUrl = clean.endsWith("/sync") ? `${clean.slice(0, -5)}/health` : `${clean}/health`;
+
+    try {
+      const resp = await fetch(healthUrl, { method: "GET" });
+      if (resp.ok) {
+        if (elements.syncStatusBadge) {
+          elements.syncStatusBadge.textContent = "[ONLINE] Server Online";
+          elements.syncStatusBadge.className = "badge";
+        }
+        elements.syncOfflineTip?.classList.add("hidden");
+        return true;
+      }
+      throw new Error("Server returned non-200");
+    } catch {
+      if (elements.syncStatusBadge) {
+        elements.syncStatusBadge.textContent = "[OFFLINE] Server Offline";
+        elements.syncStatusBadge.className = "badge inactive";
+      }
+      elements.syncOfflineTip?.classList.remove("hidden");
+      return false;
+    }
+  };
+
+  if (elements.testSyncServerBtn) {
+    elements.testSyncServerBtn.addEventListener("click", () => {
+      const url = elements.syncServerUrl?.value || "http://127.0.0.1:8765/sync";
+      checkSyncServerHealth(url);
+    });
+  }
+
+  if (elements.copySyncStartCmdBtn) {
+    const btn = elements.copySyncStartCmdBtn;
+    btn.addEventListener("click", async () => {
+      const cmd = "bash server/start.sh";
+      try {
+        await navigator.clipboard.writeText(cmd);
+        const orig = btn.textContent;
+        btn.textContent = "✓ Copied!";
+        setTimeout(() => {
+          btn.textContent = orig;
+        }, 2000);
+      } catch {
+        // Fallback
+      }
+    });
+  }
+
   elements.syncServerUrl.addEventListener("change", (e) => {
     const syncServerUrl = (e.target as HTMLInputElement).value.trim() || "http://127.0.0.1:8765/sync";
     storage.set({ syncServerUrl });
@@ -882,18 +1096,22 @@ const UI = (() => {
       return;
     }
 
-    elements.syncStatusBadge.textContent = "⏳ Syncing...";
+    elements.syncStatusBadge.textContent = "Syncing...";
     elements.syncStatusBadge.className = "badge paused";
 
     const allLocal = await storage.getAll();
     const pullRes = await pullSync(key, serverUrl);
 
     if (!pullRes.ok) {
-      elements.syncStatusBadge.textContent = `🔴 Failed: ${pullRes.error || "Connection error"}`;
+      elements.syncStatusBadge.textContent = `[FAIL] Failed: ${pullRes.error || "Connection error"}`;
       elements.syncStatusBadge.className = "badge inactive";
+      if (serverUrl.includes("127.0.0.1") || serverUrl.includes("localhost")) {
+        elements.syncOfflineTip?.classList.remove("hidden");
+      }
       return;
     }
 
+    elements.syncOfflineTip?.classList.add("hidden");
     const localLastSynced = allLocal.lastSyncedAt || 0;
     const remoteData = pullRes.data;
 
@@ -912,7 +1130,7 @@ const UI = (() => {
         blockByTitle: remoteData.blockByTitle,
         lastSyncedAt: remoteData.updatedAt,
       });
-      elements.syncStatusBadge.textContent = "🟢 Pulled from cloud";
+      elements.syncStatusBadge.textContent = "[SYNCED] Pulled from cloud";
       elements.syncStatusBadge.className = "badge";
     } else {
       // Local is newer or remote is empty, push local to remote
@@ -920,11 +1138,14 @@ const UI = (() => {
       const pushRes = await pushSync(key, serverUrl, payload);
       if (pushRes.ok) {
         await storage.set({ lastSyncedAt: payload.updatedAt });
-        elements.syncStatusBadge.textContent = "🟢 Pushed to cloud";
+        elements.syncStatusBadge.textContent = "[SYNCED] Pushed to cloud";
         elements.syncStatusBadge.className = "badge";
       } else {
-        elements.syncStatusBadge.textContent = `🔴 Push failed: ${pushRes.error || "Unknown"}`;
+        elements.syncStatusBadge.textContent = `[FAIL] Push failed: ${pushRes.error || "Unknown"}`;
         elements.syncStatusBadge.className = "badge inactive";
+        if (serverUrl.includes("127.0.0.1") || serverUrl.includes("localhost")) {
+          elements.syncOfflineTip?.classList.remove("hidden");
+        }
       }
     }
   };
@@ -1042,7 +1263,7 @@ const UI = (() => {
     if (items.lastSyncedAt !== undefined) {
       if (items.lastSyncedAt) {
         const timeStr = new Date(items.lastSyncedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        elements.syncStatusBadge.textContent = `🟢 Synced (${timeStr})`;
+        elements.syncStatusBadge.textContent = `[SYNCED] Synced (${timeStr})`;
         elements.syncStatusBadge.className = "badge";
       } else {
         elements.syncStatusBadge.textContent = "Not synced";

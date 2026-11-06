@@ -153,13 +153,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     try {
       const resp = await fetch(`${whisperUrl}/health`);
       if (resp.ok) {
-        whisperModalStatus.textContent = "🟢 MLX-Whisper Ready";
+        whisperModalStatus.textContent = "[READY] MLX-Whisper Ready";
         whisperModalStatus.className = "server-status-pill online";
       } else {
         throw new Error("HTTP error");
       }
     } catch {
-      whisperModalStatus.textContent = "⚠️ Whisper Server Offline";
+      whisperModalStatus.textContent = "[OFFLINE] Whisper Server Offline";
       whisperModalStatus.className = "server-status-pill offline";
       whisperModalStatus.title = "Start Whisper via terminal: bash server/start.sh";
     }
@@ -242,7 +242,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     isRecording = true;
 
     if (recordBtn) {
-      recordBtn.textContent = "⏹️ Stop & Verify";
+      recordBtn.textContent = "Stop & Verify";
       recordBtn.classList.add("btn-danger");
     }
     if (recordingOverlay) recordingOverlay.classList.remove("hidden");
@@ -333,7 +333,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   const stopRecordingAndVerify = async () => {
     isRecording = false;
     if (recordBtn) {
-      recordBtn.textContent = "🎙️ Start Speaking";
+      recordBtn.textContent = "Start Speaking";
       recordBtn.classList.remove("btn-danger");
     }
     if (recordingOverlay) recordingOverlay.classList.add("hidden");

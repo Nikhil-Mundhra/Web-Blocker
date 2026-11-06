@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>ScrollTax</title>
   <link rel="stylesheet" href="common.css">
   <link rel="stylesheet" href="popup.css">
@@ -11,20 +13,30 @@
 
 <body>
   <div class="popup-container">
-    <div class="header">
-      <img src="icon_32.png" width="24" height="24" alt="ScrollTax">
-      <span class="title">ScrollTax</span>
+    <!-- Popup Header -->
+    <header class="header">
+      <div class="header-brand">
+        <img src="icon_32.png" width="22" height="22" alt="ScrollTax" class="header-logo">
+        <span class="title">ScrollTax</span>
+      </div>
       <span id="status-badge" class="badge">Active</span>
-    </div>
+    </header>
 
-    <div id="site-section" class="site-section">
-      <div class="site-label">Current Tab</div>
-      <div id="current-url" class="current-url">Loading...</div>
+    <!-- Current Tab Section -->
+    <div id="site-section" class="site-section glass-panel">
+      <div class="site-header-row">
+        <span class="site-label">Current Tab</span>
+        <span class="active-dot"></span>
+      </div>
+      <div id="current-url" class="current-url" title="Current tab domain">Loading...</div>
 
       <!-- Live Daily Time Limit Card for Current Site -->
       <div id="time-limit-card" class="time-limit-card hidden">
         <div class="time-limit-row">
-          <span class="timer-title">⏱️ Remaining Today</span>
+          <span class="timer-title">
+            <svg class="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>Remaining Today</span>
+          </span>
           <span id="time-limit-remaining" class="timer-badge">--:--</span>
         </div>
         <div class="time-progress-track">
@@ -33,26 +45,41 @@
         <div id="time-limit-caption" class="time-limit-caption">-- min used of -- min</div>
       </div>
 
+      <!-- Block Actions -->
       <div class="block-actions">
-        <button id="block-page-btn" type="button" class="btn btn-secondary">Block this page</button>
-        <button id="block-site-btn" type="button" class="btn btn-primary">Block entire site</button>
+        <button id="block-page-btn" type="button" class="btn btn-secondary">
+          <svg class="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          <span>Block this page</span>
+        </button>
+        <button id="block-site-btn" type="button" class="btn btn-primary">
+          <svg class="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+          <span>Block entire site</span>
+        </button>
       </div>
     </div>
 
+    <!-- Pause / Break Section -->
     <div id="pause-section" class="pause-section">
       <div id="pause-status" class="pause-status hidden">
-        <span>Paused (<span id="pause-countdown">0</span>s left)</span>
-        <button id="resume-btn" type="button" class="btn btn-small">Resume</button>
+        <div class="pause-status-text">
+          <span class="pulsing-amber-dot"></span>
+          <span>Paused (<span id="pause-countdown">0</span>s left)</span>
+        </div>
+        <button id="resume-btn" type="button" class="btn btn-resume">Resume</button>
       </div>
       <div id="pause-actions" class="pause-actions">
-        <button id="pause-1m-btn" type="button" class="btn btn-ghost">⏸ 1m Break</button>
-        <button id="pause-5m-btn" type="button" class="btn btn-ghost">⏸ 5m Break</button>
+        <button id="pause-1m-btn" type="button" class="btn btn-break">1m Break</button>
+        <button id="pause-5m-btn" type="button" class="btn btn-break">5m Break</button>
       </div>
     </div>
 
-    <div class="footer">
-      <a id="options-link" href="#" class="options-link">⚙️ Options & Settings</a>
-    </div>
+    <!-- Footer -->
+    <footer class="footer">
+      <a id="options-link" href="#" class="options-link">
+        <svg class="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Options and Settings</span>
+      </a>
+    </footer>
   </div>
 </body>
 
