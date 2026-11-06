@@ -156,6 +156,17 @@ export function extractSyncPayload(storageData: Partial<Schema>): SyncedSettings
   };
 }
 
+function humanizeSyncError(err: unknown, serverUrl: string): string {
+  const isLocal = serverUrl.includes("127.0.0.1") || serverUrl.includes("localhost");
+  const rawMsg = err instanceof Error ? err.message : String(err);
+  if (rawMsg.toLowerCase().includes("failed to fetch") || rawMsg.toLowerCase().includes("networkerror")) {
+    return isLocal
+      ? "Local server is offline (nothing running on 127.0.0.1:8765)"
+      : "Cannot reach sync server (check your network connection or server URL)";
+  }
+  return rawMsg;
+}
+
 /**
  * Pushes encrypted state to the remote sync server.
  */
@@ -187,7 +198,7 @@ export async function pushSync(
 
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    return { ok: false, error: humanizeSyncError(err, serverUrl) };
   }
 }
 
@@ -220,6 +231,6 @@ export async function pullSync(
     const decrypted = await decryptPayload(syncKey, json);
     return { ok: true, data: decrypted };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    return { ok: false, error: humanizeSyncError(err, serverUrl) };
   }
 }

@@ -1050,13 +1050,16 @@ const UI = (() => {
         elements.syncOfflineTip?.classList.add("hidden");
         return true;
       }
-      throw new Error("Server returned non-200");
+      throw new Error(`Server returned HTTP ${resp.status}`);
     } catch {
+      const isLocal = url.includes("127.0.0.1") || url.includes("localhost");
       if (elements.syncStatusBadge) {
-        elements.syncStatusBadge.textContent = "[OFFLINE] Server Offline";
+        elements.syncStatusBadge.textContent = isLocal ? "[OFFLINE] Local Server Offline" : "[FAIL] Server Unreachable";
         elements.syncStatusBadge.className = "badge inactive";
       }
-      elements.syncOfflineTip?.classList.remove("hidden");
+      if (isLocal) {
+        elements.syncOfflineTip?.classList.remove("hidden");
+      }
       return false;
     }
   };
@@ -1136,10 +1139,16 @@ const UI = (() => {
     const pullRes = await pullSync(key, serverUrl);
 
     if (!pullRes.ok) {
-      elements.syncStatusBadge.textContent = `[FAIL] Failed: ${pullRes.error || "Connection error"}`;
+      const err = pullRes.error || "Connection error";
+      const isLocal = serverUrl.includes("127.0.0.1") || serverUrl.includes("localhost");
+      elements.syncStatusBadge.textContent = isLocal ? "[OFFLINE] Local server offline" : "[FAIL] Server unreachable";
       elements.syncStatusBadge.className = "badge inactive";
-      if (serverUrl.includes("127.0.0.1") || serverUrl.includes("localhost")) {
+      elements.syncStatusBadge.title = err;
+      if (isLocal) {
         elements.syncOfflineTip?.classList.remove("hidden");
+        showTransferFeedback("Local server is offline. Click 'Connect Free Cloudflare Sync' above or run bash server/start.sh.", true);
+      } else {
+        showTransferFeedback(`Sync failed: ${err}`, true);
       }
       return;
     }
@@ -1174,10 +1183,16 @@ const UI = (() => {
         elements.syncStatusBadge.textContent = "[SYNCED] Pushed to cloud";
         elements.syncStatusBadge.className = "badge";
       } else {
-        elements.syncStatusBadge.textContent = `[FAIL] Push failed: ${pushRes.error || "Unknown"}`;
+        const err = pushRes.error || "Unknown error";
+        const isLocal = serverUrl.includes("127.0.0.1") || serverUrl.includes("localhost");
+        elements.syncStatusBadge.textContent = isLocal ? "[OFFLINE] Local server offline" : "[FAIL] Push failed";
         elements.syncStatusBadge.className = "badge inactive";
-        if (serverUrl.includes("127.0.0.1") || serverUrl.includes("localhost")) {
+        elements.syncStatusBadge.title = err;
+        if (isLocal) {
           elements.syncOfflineTip?.classList.remove("hidden");
+          showTransferFeedback("Local server is offline. Click 'Connect Free Cloudflare Sync' above or run bash server/start.sh.", true);
+        } else {
+          showTransferFeedback(`Push failed: ${err}`, true);
         }
       }
     }
