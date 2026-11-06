@@ -574,13 +574,7 @@ describe("Options Page Integration Test", () => {
     expect(copyCmdBtn.textContent).toBe("✓ Copied!");
   });
 
-  it("connects to Cloudflare Sync via 1-click button and auto-generates sync key", async () => {
-    const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ status: "ok" }),
-    });
-
+  it("renders the 1-click Cloudflare deploy link", async () => {
     jest.isolateModules(() => {
       require("../options");
     });
@@ -588,50 +582,7 @@ describe("Options Page Integration Test", () => {
     window.dispatchEvent(new Event("DOMContentLoaded"));
     await new Promise((r) => setTimeout(r, 20));
 
-    const connectBtn = document.getElementById("connect-cloudflare-btn") as HTMLButtonElement;
-    const serverUrlInput = document.getElementById("sync-server-url") as HTMLInputElement;
-    const keyInput = document.getElementById("sync-key-input") as HTMLInputElement;
     const deployBtn = document.getElementById("deploy-cloudflare-btn") as HTMLAnchorElement;
-
     expect(deployBtn.href).toContain("deploy.workers.cloudflare.com");
-
-    connectBtn.click();
-    await new Promise((r) => setTimeout(r, 20));
-
-    expect(serverUrlInput.value).toBe("https://scrolltax-sync.workers.dev/sync");
-    expect(keyInput.value).toMatch(/^st_[a-f0-9]{32}$/);
-    expect(mockStorageSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        syncServerUrl: "https://scrolltax-sync.workers.dev/sync",
-      }),
-    );
-
-    global.fetch = originalFetch;
-  });
-
-  it("switches to Cloudflare Sync from offline warning box", async () => {
-    const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ status: "ok" }),
-    });
-
-    jest.isolateModules(() => {
-      require("../options");
-    });
-
-    window.dispatchEvent(new Event("DOMContentLoaded"));
-    await new Promise((r) => setTimeout(r, 20));
-
-    const switchBtn = document.getElementById("switch-to-cloudflare-btn") as HTMLButtonElement;
-    const offlineTip = document.getElementById("sync-offline-tip") as HTMLDivElement;
-    offlineTip.classList.remove("hidden");
-
-    switchBtn.click();
-    await new Promise((r) => setTimeout(r, 20));
-
-    expect(offlineTip.classList.contains("hidden")).toBe(true);
-
-    global.fetch = originalFetch;
   });
 });

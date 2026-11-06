@@ -1,7 +1,5 @@
 import type { Schema, Schedule, Mode, Resolution } from "../storage/schema";
 
-export const CLOUDFLARE_DEFAULT_SYNC_URL = "https://scrolltax-sync.workers.dev/sync";
-
 export interface SyncedSettings {
   blocked: string[];
   mode: Mode;

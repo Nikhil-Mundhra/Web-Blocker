@@ -394,7 +394,7 @@
             <div class="sync-steps-card">
               <div class="sync-step">
                 <span class="sync-step-badge">1</span>
-                <span class="sync-step-text"><strong>On this browser:</strong> Click <em>"Generate New"</em> (or connect Cloudflare) and copy your Secret Key.</span>
+                <span class="sync-step-text"><strong>On this browser:</strong> Click <em>"Generate New"</em> and copy your Secret Key.</span>
               </div>
               <div class="sync-step">
                 <span class="sync-step-badge">2</span>
@@ -403,23 +403,6 @@
               <div class="sync-step">
                 <span class="sync-step-badge">3</span>
                 <span class="sync-step-text"><strong>Done:</strong> Click <em>"Sync Now"</em>. Both browsers stay continuously synced!</span>
-              </div>
-            </div>
-
-            <!-- Cloudflare 1-Click Cloud Sync -->
-            <div class="option baseline settings-row-nested cloudflare-banner-row">
-              <div class="option-label-group">
-                <label>Cloudflare Cloud Sync</label>
-                <span class="option-desc">Free serverless sync — zero terminal or local server required</span>
-              </div>
-              <div class="cloudflare-actions-group">
-                <button id="connect-cloudflare-btn" type="button" class="btn btn-cloudflare">
-                  <svg class="svg-icon cloudflare-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"></path></svg>
-                  <span>Connect Free Cloudflare Sync</span>
-                </button>
-                <a id="deploy-cloudflare-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/Nikhil-Mundhra/Web-Blocker" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-cloudflare-deploy" title="Deploy your own private Cloudflare Worker in 1 click">
-                  <span>🚀 Deploy Private Worker</span>
-                </a>
               </div>
             </div>
 
@@ -448,25 +431,32 @@
               </div>
             </div>
 
-            <!-- Offline Local Server Diagnostic & 1-Click Command -->
+            <!-- Offline Local Server Diagnostic -->
             <div id="sync-offline-tip" class="tip-card warning hidden">
               <div class="tip-card-content">
                 <div class="tip-card-header">
                   <strong>⚠️ Local Sync Server Offline</strong>
                   <span class="tip-target-host">Target: <code>127.0.0.1:8765</code></span>
                 </div>
-                <p class="tip-subtext">Avoid terminal commands by switching to Cloudflare Cloud in 1 click:</p>
-                <div class="offline-actions-row">
-                  <button id="switch-to-cloudflare-btn" type="button" class="btn btn-cloudflare btn-small">
-                    ☁️ Switch to Free Cloudflare Sync (No Terminal)
-                  </button>
-                </div>
-                <p class="tip-subtext-muted">Or if running locally on this Mac, run in your terminal:</p>
+                <p class="tip-subtext">If syncing locally between browsers on this Mac, start the local server in your terminal:</p>
                 <div class="code-copy-row">
                   <code class="font-mono">bash server/start.sh</code>
                   <button id="copy-sync-start-cmd-btn" type="button" class="btn btn-secondary btn-small">Copy Command</button>
                 </div>
-                <p class="tip-subtext-muted">✨ Note: The local MLX-Whisper server includes sync automatically on the same port.</p>
+                <p class="tip-subtext-muted">✨ Note: MLX-Whisper and sync run together on the same server. Or use Instant Transfer above with no server.</p>
+              </div>
+            </div>
+
+            <!-- Optional Cloudflare Private Worker Deployment -->
+            <div class="option baseline settings-row-nested cloudflare-banner-row">
+              <div class="option-label-group">
+                <label>Cloud Hosting (Optional)</label>
+                <span class="option-desc">Deploy your own private Cloudflare sync worker in 1 click</span>
+              </div>
+              <div class="cloudflare-actions-group">
+                <a id="deploy-cloudflare-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/Nikhil-Mundhra/Web-Blocker" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-cloudflare-deploy" title="Deploy your own private Cloudflare Worker in 1 click">
+                  <span>🚀 Deploy Free Private Worker (Cloudflare)</span>
+                </a>
               </div>
             </div>
 

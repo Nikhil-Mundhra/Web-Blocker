@@ -9,7 +9,6 @@ import {
   pushSync,
   pullSync,
   extractSyncPayload,
-  CLOUDFLARE_DEFAULT_SYNC_URL,
 } from "./helpers/sync";
 
 interface SpeechRecognitionEvent {
@@ -119,8 +118,6 @@ const UI = (() => {
     syncStatusBadge: document.getElementById("sync-status-badge") as HTMLSpanElement,
     syncOfflineTip: document.getElementById("sync-offline-tip") as HTMLDivElement | null,
     copySyncStartCmdBtn: document.getElementById("copy-sync-start-cmd-btn") as HTMLButtonElement | null,
-    connectCloudflareBtn: document.getElementById("connect-cloudflare-btn") as HTMLButtonElement | null,
-    switchToCloudflareBtn: document.getElementById("switch-to-cloudflare-btn") as HTMLButtonElement | null,
     deployCloudflareBtn: document.getElementById("deploy-cloudflare-btn") as HTMLAnchorElement | null,
   };
 
@@ -1089,32 +1086,6 @@ const UI = (() => {
         // Fallback
       }
     });
-  }
-
-  const connectToCloudflare = async () => {
-    elements.syncServerUrl.value = CLOUDFLARE_DEFAULT_SYNC_URL;
-    await storage.set({ syncServerUrl: CLOUDFLARE_DEFAULT_SYNC_URL });
-
-    if (!elements.syncKeyInput.value.trim()) {
-      const newKey = generateSyncKey();
-      elements.syncKeyInput.value = newKey;
-      await storage.set({ syncKey: newKey });
-    }
-
-    if (elements.syncOfflineTip) {
-      elements.syncOfflineTip.classList.add("hidden");
-    }
-
-    showTransferFeedback("✓ Connected to Free Cloudflare Sync!", false);
-    performManualSync();
-  };
-
-  if (elements.connectCloudflareBtn) {
-    elements.connectCloudflareBtn.addEventListener("click", connectToCloudflare);
-  }
-
-  if (elements.switchToCloudflareBtn) {
-    elements.switchToCloudflareBtn.addEventListener("click", connectToCloudflare);
   }
 
   elements.syncServerUrl.addEventListener("change", (e) => {
